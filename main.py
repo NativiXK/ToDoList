@@ -8,11 +8,24 @@ Data: 03/2021
 
 from asyncio import events
 from re import A
-import sys
+import sys, ctypes
 import tkinter
-from PyQt5.QtWidgets import QApplication, QShortcut, QSystemTrayIcon, QAction, QMenu, QWidget, QLabel, qApp
-from PyQt5 import QtCore, QtGui
+from PyQt5.QtWidgets import (
+    QApplication, 
+    QShortcut, 
+    QSystemTrayIcon, 
+    QAction, 
+    QMenu, 
+    QWidget, 
+    QLabel, 
+    qApp, 
+    QLayout, 
+    QVBoxLayout, 
+    QHBoxLayout, 
+    QPushButton,
+    )
 
+from PyQt5 import QtCore, QtGui
 
 class TraySystem(QSystemTrayIcon):
     """
@@ -84,58 +97,91 @@ class Landing(QWidget):
     This class represents a card with a title and a description.
     """
 
-    def __init__(self, title, description, callback):
+    def __init__(self, title : str, description : str, callback : object, geometry : tuple) -> None:
         super().__init__()
         self.title = title
         self.description = description
         self.callback = callback
+        self.geometry = geometry
+        self.__main_layout = QVBoxLayout()
         self.initUI()
 
-    def initUI(self):
+    def initUI(self) -> None:
         self.setWindowTitle(self.title)
-        self.setGeometry(300, 300, 300, 200)
+        self.setGeometry(self.geometry[0], self.geometry[1], self.geometry[2], self.geometry[3])
         self.setWindowIcon(QtGui.QIcon("open-book.png"))
         self.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
         self.setStyleSheet("background-color: #f2f2f2;")
-
-
-        # self.title_label = QLabel(self, text=self.title, font=("Arial", 16))
-        # self.title_label.pack(side="top", fill="x", pady=10)
-
-        # self.description_label = QLabel(self, text=self.description, font=("Arial", 12))
-        # self.description_label.pack(side="top", fill="x", pady=10)
-
-        # self.button = tkinter.Button(self, text="OK", command=self.callback)
-        # self.button.pack(side="top", fill="x", pady=10)
-
+        self.setMinimumSize(self.geometry[2], self.geometry[3])
+        self.setMaximumSize(self.geometry[2], self.geometry[3])
+        self.update()
+        
         self.show()
 
-    def closeEvent(self, event: QtGui.QCloseEvent) -> None:
+    def update(self, cards : list = []) -> None:
+        """
+        Receives a list card layouts to be added to the main layout
+        """
+
+        header = QHBoxLayout()
+        title = QLabel("Titulo")
+        date = QLabel("Data")
+        header.addWidget(title)
+        header.addWidget(date)
+        description = QLabel("Descrição: \n Lorem ipsum gravida taciti elit dui vehicula iaculis habitasse imperdiet hac, vivamus velit accumsan et odio sem nibh nulla id pellentesque hac, donec sollicitudin sapien tortor vivamus integer aenean eros nisl.")
+        done_button = QPushButton("Concluído")
+        t = QWidget()
+
+        card = QVBoxLayout()
+        card.addLayout(header)
+        card.addWidget(description, alignment=QtCore.Qt.AlignmentFlag.AlignLeft)
+        card.addWidget(done_button, alignment=QtCore.Qt.AlignmentFlag.AlignCenter)
+        t.setLayout(card)
+        t.setFixedSize(self.geometry[3] - 30,200)
+        t.setContentsMargins(20,20,20,20)
+        t.setStyleSheet("background-color: white;")
+
+        self.__main_layout.addWidget(t)
+
+        self.setLayout(self.__main_layout)
+
+    def closeEvent(self, event) -> None:
         self.hide()
         event.ignore()
+
+class CardLayout(QLayout):
+
+    def __init__(self):
+        self.layout = QVBoxLayout()
+        self.layout.setContentsMargins(10, 10, 10, 10)
+
+    def addItem(self, item):
+        pass
 
 class App:
 
     def __init__(self) -> None:
         self.menu = [
-            ("Olá", "text"),
             ("Abrir", self.open_list),
             ("Separador", "separator"),
             ("Configurar", self.configurar),
             ("Sair", self.exit)
         ]
+        self.__user32 = ctypes.windll.user32
+        self.screen_resolution : tuple = (self.__user32.GetSystemMetrics(0), self.__user32.GetSystemMetrics(1))
+        self.width : int = 500
+        self.height : int = 800
+        self.geometry = (int(self.screen_resolution[0] / 2 - self.width / 2), int(self.screen_resolution[1] / 2 - self.height / 2), self.width, self.height)
 
     def run(self):
 
         self.app = QApplication(sys.argv)
         self.tray = TraySystem(self.menu)
+        self.landing = Landing("To Do List", "Aqui você pode criar sua lista de tarefas", self, self.geometry)
         self.app.exec_()
 
     def open_list(self):
-        self.landing = Landing("To Do List", "Aqui você pode criar sua lista de tarefas", self.hide_landing)
-
-    def hide_landing(self):
-        self.landing.hide()
+        self.landing.show()
 
     def configurar(self):
         print("Configurar")
