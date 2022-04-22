@@ -13,7 +13,8 @@ import tkinter
 from unicodedata import name
 from PyQt5.QtWidgets import (
     QApplication, 
-    QSystemTrayIcon, 
+    QSystemTrayIcon,
+    QMainWindow,
     QAction,
     QStylePainter,
     QMenu, 
@@ -22,8 +23,10 @@ from PyQt5.QtWidgets import (
     qApp, 
     QStyleOption,
     QStyle,
+    QStackedLayout,
     QVBoxLayout, 
-    QHBoxLayout, 
+    QHBoxLayout,
+    QScrollArea, 
     QPushButton,
     )
 
@@ -94,29 +97,30 @@ class TraySystem(QSystemTrayIcon):
         self.hide()
         qApp.quit()
 
-class Landing(QWidget):
+class Landing(QMainWindow):
     """
     This class implements the main windows of the app.
     """
 
     def __init__(self, title : str, description : str, callback : object, geometry : tuple) -> None:
         super(Landing, self).__init__()
-        self.setObjectName("Landing")
         self.title = title
         self.description = description
         self.callback = callback
         self.geometry = geometry
-        self.__main_layout = QVBoxLayout()
+        self.widget = QWidget()
+        self.scroll = QScrollArea()
+        self.widget.setObjectName("Landing")
         self.initUI()
 
     def paintEvent(self, a0: QtGui.QPaintEvent) -> None:
         """
         This function must exist in order to use the stylesheets
         """
-        opt = QStyleOption();
+        opt = QStyleOption()
         opt.initFrom(self)
-        p = QStylePainter(self);
-        self.style().drawPrimitive(QStyle.PE_Widget, opt, p, self);
+        p = QStylePainter(self)
+        self.style().drawPrimitive(QStyle.PE_Widget, opt, p, self)
 
     def initUI(self) -> None:
         self.setWindowTitle(self.title)
@@ -133,10 +137,19 @@ class Landing(QWidget):
         """
         Receives a list card layouts to be added to the main layout
         """
-        
-        self.__main_layout.addWidget(Card(1, "Mateus Konkol", "21/04/2022","É um cara esforçado para aprender as coisas no mundo e se dedicar a sua noiva Lavininha", self.callback))
+        layout = QVBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
 
-        self.setLayout(self.__main_layout)
+        for i in range(10):
+            layout.addWidget(Card(i, "Mateus Konkol", "21/04/2022","É um cara esforçado para aprender as coisas\n no mundo e se dedicar a sua noiva Lavininha", self.callback))
+
+        self.widget.setLayout(layout)
+
+        #Create a scroll area and add the widget to it
+        self.scroll.setWidgetResizable(True)
+        self.scroll.setWidget(self.widget)
+
+        self.setCentralWidget(self.scroll)
 
     def closeEvent(self, event) -> None:
         self.hide()
@@ -157,8 +170,8 @@ class Card(QWidget):
 
         header = QHBoxLayout()
         header.setObjectName("card-header-layout")
-        header.addWidget(QLabel(title), alignment=QtCore.Qt.AlignRight)
-        header.addWidget(QLabel(date), alignment=QtCore.Qt.AlignLeft)
+        header.addWidget(QLabel(title), alignment=QtCore.Qt.AlignLeft)
+        header.addWidget(QLabel(date), alignment=QtCore.Qt.AlignRight)
 
         button = QPushButton("Concluído")
         button.setObjectName("card-button")
@@ -175,13 +188,13 @@ class Card(QWidget):
         """
         This function must exist in order to use the stylesheets
         """
-        opt = QStyleOption();
+        opt = QStyleOption()
         opt.initFrom(self)
-        p = QStylePainter(self);
-        self.style().drawPrimitive(QStyle.PE_Widget, opt, p, self);
+        p = QStylePainter(self)
+        self.style().drawPrimitive(QStyle.PE_Widget, opt, p, self)
 
     def __mousePressEvent(self, event) -> None:
-        print("Você clicou neste card")
+        print("Você clicou no card " + str(self.__id))
 
 class App:
 
@@ -206,15 +219,15 @@ class App:
         self.landing = Landing("To Do List", "Aqui você pode criar sua lista de tarefas", self, self.geometry)
         self.app.setStyleSheet("""
 QWidget#Landing {
-    background-color: #a6a6a6;
+    background-color: black;
 }
 
 QWidget#card {
 
     background-color: #cccccc;
     border-radius: 10px;
-    margin: 5%;
-    padding: 5%;
+    margin: 20x;
+    padding: 10px;
     border: 1px solid gray;
     max-height: 10em;
 }
