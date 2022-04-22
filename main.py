@@ -10,16 +10,18 @@ from asyncio import events
 from re import A
 import sys, ctypes
 import tkinter
+from unicodedata import name
 from PyQt5.QtWidgets import (
     QApplication, 
-    QShortcut, 
     QSystemTrayIcon, 
-    QAction, 
+    QAction,
+    QStylePainter,
     QMenu, 
     QWidget, 
     QLabel, 
     qApp, 
-    QLayout, 
+    QStyleOption,
+    QStyle,
     QVBoxLayout, 
     QHBoxLayout, 
     QPushButton,
@@ -94,11 +96,12 @@ class TraySystem(QSystemTrayIcon):
 
 class Landing(QWidget):
     """
-    This class represents a card with a title and a description.
+    This class implements the main windows of the app.
     """
 
     def __init__(self, title : str, description : str, callback : object, geometry : tuple) -> None:
-        super().__init__()
+        super(Landing, self).__init__()
+        self.setObjectName("Landing")
         self.title = title
         self.description = description
         self.callback = callback
@@ -106,42 +109,32 @@ class Landing(QWidget):
         self.__main_layout = QVBoxLayout()
         self.initUI()
 
+    def paintEvent(self, a0: QtGui.QPaintEvent) -> None:
+        """
+        This function must exist in order to use the stylesheets
+        """
+        opt = QStyleOption();
+        opt.initFrom(self)
+        p = QStylePainter(self);
+        self.style().drawPrimitive(QStyle.PE_Widget, opt, p, self);
+
     def initUI(self) -> None:
         self.setWindowTitle(self.title)
         self.setGeometry(self.geometry[0], self.geometry[1], self.geometry[2], self.geometry[3])
         self.setWindowIcon(QtGui.QIcon("open-book.png"))
         self.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
-        self.setStyleSheet("background-color: #f2f2f2;")
         self.setMinimumSize(self.geometry[2], self.geometry[3])
         self.setMaximumSize(self.geometry[2], self.geometry[3])
-        self.update()
+        self.update_cards()
         
         self.show()
 
-    def update(self, cards : list = []) -> None:
+    def update_cards(self, cards : list = []) -> None:
         """
         Receives a list card layouts to be added to the main layout
         """
-
-        header = QHBoxLayout()
-        title = QLabel("Titulo")
-        date = QLabel("Data")
-        header.addWidget(title)
-        header.addWidget(date)
-        description = QLabel("Descrição: \n Lorem ipsum gravida taciti elit dui vehicula iaculis habitasse imperdiet hac, vivamus velit accumsan et odio sem nibh nulla id pellentesque hac, donec sollicitudin sapien tortor vivamus integer aenean eros nisl.")
-        done_button = QPushButton("Concluído")
-        t = QWidget()
-
-        card = QVBoxLayout()
-        card.addLayout(header)
-        card.addWidget(description, alignment=QtCore.Qt.AlignmentFlag.AlignLeft)
-        card.addWidget(done_button, alignment=QtCore.Qt.AlignmentFlag.AlignCenter)
-        t.setLayout(card)
-        t.setFixedSize(self.geometry[3] - 30,200)
-        t.setContentsMargins(20,20,20,20)
-        t.setStyleSheet("background-color: white;")
-
-        self.__main_layout.addWidget(t)
+        
+        self.__main_layout.addWidget(Card(1, "Mateus Konkol", "21/04/2022","É um cara esforçado para aprender as coisas no mundo e se dedicar a sua noiva Lavininha", self.callback))
 
         self.setLayout(self.__main_layout)
 
@@ -149,14 +142,46 @@ class Landing(QWidget):
         self.hide()
         event.ignore()
 
-class CardLayout(QLayout):
+class Card(QWidget):
+    """
+    This class inherits from QWidget and implements a card layout
+    """
 
-    def __init__(self):
-        self.layout = QVBoxLayout()
-        self.layout.setContentsMargins(10, 10, 10, 10)
+    def __init__(self, id : int, title : str, date : str, description : str, callback : object) -> None:
+        super(Card, self).__init__()
+        self.setObjectName("card") #Sets the object name to be used in stylesheets
+        self.__id : int = id
+        self.__title : str = title
+        self.__description : str = description
+        self.__date : str = date
 
-    def addItem(self, item):
-        pass
+        header = QHBoxLayout()
+        header.setObjectName("card-header-layout")
+        header.addWidget(QLabel(title), alignment=QtCore.Qt.AlignRight)
+        header.addWidget(QLabel(date), alignment=QtCore.Qt.AlignLeft)
+
+        button = QPushButton("Concluído")
+        button.setObjectName("card-button")
+
+        self.__card = QVBoxLayout()
+        self.__card.setObjectName("card-layout")
+        self.__card.addLayout(header)
+        self.__card.addWidget(QLabel(description), alignment=QtCore.Qt.AlignmentFlag.AlignLeft)
+        self.__card.addWidget(button, alignment=QtCore.Qt.AlignmentFlag.AlignCenter)
+        self.setLayout(self.__card)
+        self.mousePressEvent = self.__mousePressEvent
+
+    def paintEvent(self, a0: QtGui.QPaintEvent) -> None:
+        """
+        This function must exist in order to use the stylesheets
+        """
+        opt = QStyleOption();
+        opt.initFrom(self)
+        p = QStylePainter(self);
+        self.style().drawPrimitive(QStyle.PE_Widget, opt, p, self);
+
+    def __mousePressEvent(self, event) -> None:
+        print("Você clicou neste card")
 
 class App:
 
@@ -176,8 +201,45 @@ class App:
     def run(self):
 
         self.app = QApplication(sys.argv)
+        self.app.setStyle("Fusion")
         self.tray = TraySystem(self.menu)
         self.landing = Landing("To Do List", "Aqui você pode criar sua lista de tarefas", self, self.geometry)
+        self.app.setStyleSheet("""
+QWidget#Landing {
+    background-color: #a6a6a6;
+}
+
+QWidget#card {
+
+    background-color: #cccccc;
+    border-radius: 10px;
+    margin: 5%;
+    padding: 5%;
+    border: 1px solid gray;
+    max-height: 10em;
+}
+
+QWidget#card:pressed {
+    background-color: #9fcf40;
+}
+
+QPushButton#card-button {
+    background-color: #b0b0b0;
+    border-width: 2px;
+    border-radius: 5px;
+    border-color: beige;
+    font: bold 14px;
+    width: 100px;
+    height: 30px;
+    padding: 2%;
+}
+
+QPushButton#card-button:hover {
+    background-color: #a6a6a6;
+    border: 1px solid gray;
+    border-style: outset;
+}
+        """)
         self.app.exec_()
 
     def open_list(self):
