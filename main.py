@@ -135,25 +135,7 @@ class Landing(QMainWindow):
         self.widget.layout().addWidget(self.card_list)
 
         self.setCentralWidget(self.widget)
-        self.show()
-
-    def update_cards(self, cards : list = []) -> None:
-        """
-        Receives a list card layouts to be added to the main layout
-        """
-        layout = self.widget.layout()
-
-        #Remove all widgets from the layout
-        if layout.count() > 0:
-            for i in reversed(range(layout.count())):
-                widget = layout.itemAt(i).widget()
-                if not widget in cards: #Delete thewidget if not in cards
-                    widget.setParent(None)
-                elif widget in cards:
-                    pass
-        else:
-            for card in cards:
-                layout.addWidget(card)                
+        self.show()             
 
     def closeEvent(self, event) -> None:
         self.callback.exit()
@@ -331,7 +313,7 @@ class App:
 
     def card_done(self, card : Card) -> None:
         self.__cards.remove(card)
-        self.landing.update_cards(self.__cards)
+        self.landing.card_list.update_cards(self.__cards)
         print("Você deletou o card " + str(card.id))
 
     def settings(self):
