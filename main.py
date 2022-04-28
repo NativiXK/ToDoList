@@ -6,11 +6,7 @@ Data: 03/2021
 
 """
 
-from asyncio import events
-from re import A
 import sys, ctypes, styles
-import tkinter
-from unicodedata import name
 from PyQt5.QtWidgets import (
     QApplication, 
     QSystemTrayIcon,
@@ -23,11 +19,11 @@ from PyQt5.QtWidgets import (
     qApp, 
     QStyleOption,
     QStyle,
-    QStackedLayout,
     QVBoxLayout, 
     QHBoxLayout,
     QGridLayout,
-    QScrollArea, 
+    QScrollArea,
+    QFrame, 
     QPushButton,
     )
 
@@ -110,7 +106,7 @@ class Landing(QMainWindow):
         self.callback = callback
         self.geometry = geometry
         self.widget = QWidget()
-        self.scroll = QScrollArea()
+        self.card_list = CardList()
         self.widget.setObjectName("Landing")
         self.initUI()
 
@@ -131,15 +127,14 @@ class Landing(QMainWindow):
         self.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
         self.setMinimumSize(self.geometry[2], self.geometry[3])
         self.setMaximumSize(self.geometry[2], self.geometry[3])
+
         #Set an empty layout to the main window
         self.widget.setLayout(QVBoxLayout())
+        self.widget.layout().setContentsMargins(0, 0, 0, 0)
         self.widget.layout().setAlignment(QtCore.Qt.AlignTop)
-        self.update_cards(self.callback.get_cards())
+        self.widget.layout().addWidget(self.card_list)
 
-        #Create a scroll area and add the widget to it
-        self.scroll.setWidgetResizable(True)
-        self.scroll.setWidget(self.widget)
-        self.setCentralWidget(self.scroll)
+        self.setCentralWidget(self.widget)
         self.show()
 
     def update_cards(self, cards : list = []) -> None:
@@ -198,7 +193,7 @@ class Card(QWidget):
         label.setWordWrap(True)
         label.setObjectName("card-description")
         label.setFont(styles.fonts[label.objectName()])
-        card.addWidget(label, 1, 0, 1, 4, QtCore.Qt.AlignmentFlag.AlignCenter)
+        card.addWidget(label, 1, 0, 1, 4)
 
         button = QPushButton("Concluído")
         button.setObjectName("card-button")
@@ -252,6 +247,51 @@ class Card(QWidget):
     def __mousePressEvent(self, event) -> None:
         print("Você clicou no card " + str(self.__id))
 
+class CardList(QScrollArea):
+
+    def __init__(self) -> None:
+        super(CardList, self).__init__()
+        self.setObjectName("card-list") #Sets the object name to be used in stylesheets
+        self.widget = QWidget(self)
+
+        self.__list_layout = QVBoxLayout()
+        self.__list_layout.setAlignment(QtCore.Qt.AlignTop)
+        self.widget.setLayout(self.__list_layout)
+ 
+        self.setWidget(self.widget)
+        self.setWidgetResizable(True)
+        #set frame to false
+        self.setFrameShape(QScrollArea.NoFrame)        
+        self.show()
+
+    def update_cards(self, cards : list = []) -> None:
+        """
+        Receives a list card layouts to be added to the main layout
+        """
+        layout = self.__list_layout
+
+        #Remove all widgets from the layout
+        if layout.count() > 0:
+            for i in reversed(range(layout.count())):
+                widget = layout.itemAt(i).widget()
+                if not widget in cards: #Delete thewidget if not in cards
+                    widget.setParent(None)
+                elif widget in cards:
+                    pass
+        else:
+            for card in cards:
+                layout.addWidget(card) 
+            print(layout.count())
+
+    def paintEvent(self, a0: QtGui.QPaintEvent) -> None:
+        """
+        This function must exist in order to use the stylesheets
+        """
+        opt = QStyleOption()
+        opt.initFrom(self)
+        p = QStylePainter(self)
+        self.style().drawPrimitive(QStyle.PE_Widget, opt, p, self)
+
 class App:
 
     def __init__(self) -> None:
@@ -277,6 +317,8 @@ class App:
         self.app.setStyle("Fusion")
         self.tray = TraySystem(self.menu)
         self.landing = Landing("To Do List", "Aqui você pode criar sua lista de tarefas", self, self.geometry)
+        self.landing.card_list.update_cards(self.__cards)
+
         self.app.setStyleSheet(styles.stylesheet)
         
         self.app.exec_()
@@ -306,3 +348,8 @@ if __name__ == "__main__":
     except Exception as e:
         print(e)
         app.exit()
+
+    # list = CardList()
+    # list.update_cards(app.get_cards())
+    # app.app.setStyleSheet(styles.stylesheet)
+    # app.app.exec_()

@@ -6,6 +6,8 @@ fonts = {
     "card-date" : QFont("Helvetica", 12, QFont.Bold),
     "card-description" : QFont("Helvetica", 10, QFont.Normal),
     "card-button" : QFont("Helvetica", 12, QFont.Bold),
+    "header-title" : QFont("Helvetica", 18, QFont.Bold),
+    "close-button" : QFont("Helvetica", 18, QFont.Bold),
 }
 
 stylesheet = """
@@ -54,9 +56,13 @@ QPushButton#card-button:hover {
 
 #card-description {
     text-align: justify;
-    margin: 0 20px 0 20px;
+    margin: 0 5px 0 5px;
 }
 
-
+QPushButton#close-button {
+    background-color: red;
+    width: 30px;
+    height: 30px;
+}
 
         """
