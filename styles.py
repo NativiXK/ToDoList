@@ -7,12 +7,13 @@ fonts = {
     "card-description" : QFont("Helvetica", 10, QFont.Normal),
     "card-button" : QFont("Helvetica", 12, QFont.Bold),
     "header-title" : QFont("Helvetica", 18, QFont.Bold),
-    "close-button" : QFont("Helvetica", 18, QFont.Bold),
+    "header-close-button" : QFont("Helvetica", 18, QFont.Bold),
 }
 
 stylesheet = """
 QWidget#Landing {
     background-color: white;
+    border-radius: 10px;
 }
 
 QWidget#card {
@@ -59,10 +60,27 @@ QPushButton#card-button:hover {
     margin: 0 5px 0 5px;
 }
 
-QPushButton#close-button {
+QWidget#header {
+    background-color: #cccccc;
+    border: 1px solid gray;
+    max-height: 100px;
+}
+
+QLabel#header-title {
+    margin: 5px 0 5px 10px;
+}
+
+QPushButton#header-close-button {
     background-color: red;
-    width: 30px;
-    height: 30px;
+    border-width: 2px;
+    border-radius: 5px;
+    margin: 5px 10px 5px 0;
+    max-width: 40px;
+    max-height: 40px;
+}
+
+QPushButton#header-close-button:hover {
+    background-color: #c91100;
 }
 
         """

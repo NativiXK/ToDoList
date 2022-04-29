@@ -105,9 +105,7 @@ class Landing(QMainWindow):
         self.description = description
         self.callback = callback
         self.geometry = geometry
-        self.widget = QWidget()
-        self.card_list = CardList()
-        self.widget.setObjectName("Landing")
+        
         self.initUI()
 
     def paintEvent(self, a0: QtGui.QPaintEvent) -> None:
@@ -121,20 +119,30 @@ class Landing(QMainWindow):
 
     def initUI(self) -> None:
         #Set main window properties
-        self.setWindowTitle(self.title)
+        self.setWindowFlags(QtCore.Qt.FramelessWindowHint)
         self.setGeometry(self.geometry[0], self.geometry[1], self.geometry[2], self.geometry[3])
         self.setWindowIcon(QtGui.QIcon("open-book.png"))
-        self.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
+        #set border radius in the main window
+
+
         self.setMinimumSize(self.geometry[2], self.geometry[3])
         self.setMaximumSize(self.geometry[2], self.geometry[3])
 
-        #Set an empty layout to the main window
-        self.widget.setLayout(QVBoxLayout())
-        self.widget.layout().setContentsMargins(0, 0, 0, 0)
-        self.widget.layout().setAlignment(QtCore.Qt.AlignTop)
-        self.widget.layout().addWidget(self.card_list)
+        self.main_widget = QWidget()
+        self.main_widget.setObjectName("Landing")
 
-        self.setCentralWidget(self.widget)
+        self.header = Header(self.title, self)
+        self.card_list = CardList()
+
+        #Set an empty layout to the main window
+        self.main_widget.setLayout(QVBoxLayout())
+        self.main_widget.layout().stretch(0)
+        self.main_widget.layout().setContentsMargins(0, 0, 0, 0)
+        self.main_widget.layout().setAlignment(QtCore.Qt.AlignTop)
+        self.main_widget.layout().addWidget(self.header)
+        self.main_widget.layout().addWidget(self.card_list)
+
+        self.setCentralWidget(self.main_widget)
         self.show()             
 
     def closeEvent(self, event) -> None:
@@ -229,6 +237,51 @@ class Card(QWidget):
     def __mousePressEvent(self, event) -> None:
         print("Você clicou no card " + str(self.__id))
 
+class Header(QWidget):
+
+    def __init__(self, title : str, callback : QMainWindow) -> None:
+        super(Header, self).__init__()
+        self.setObjectName("header")
+        self.__title = title
+        self.callback = callback
+        self.__build_header()
+
+    def __build_header(self) -> None:
+        header = QHBoxLayout()
+        header.setContentsMargins(0, 0, 0, 0)
+        
+        self.titleLabel = QLabel(parent = self, text = self.__title)
+        self.titleLabel.setObjectName("header-title")
+        self.titleLabel.setFont(styles.fonts[self.titleLabel.objectName()])
+
+        self.closeButton = QPushButton(parent = self, text = "X")
+        self.closeButton.setObjectName("header-close-button")
+        self.closeButton.setFont(styles.fonts[self.closeButton.objectName()])
+        self.closeButton.clicked.connect(lambda : self.callback.close())
+
+        header.addWidget(self.titleLabel)
+        header.addWidget(self.closeButton)
+
+        self.setLayout(header)
+
+    @property
+    def title(self) -> str:
+        return self.titleLabel.text()
+    
+    @title.setter
+    def title(self, title : str) -> None:
+        self.titleLabel.setText(title)
+        self.__title = title
+
+    def paintEvent(self, a0: QtGui.QPaintEvent) -> None:
+        """
+        This function must exist in order to use the stylesheets
+        """
+        opt = QStyleOption()
+        opt.initFrom(self)
+        p = QStylePainter(self)
+        self.style().drawPrimitive(QStyle.PE_Widget, opt, p, self)
+
 class CardList(QScrollArea):
 
     def __init__(self) -> None:
@@ -243,8 +296,7 @@ class CardList(QScrollArea):
         self.setWidget(self.widget)
         self.setWidgetResizable(True)
         #set frame to false
-        self.setFrameShape(QScrollArea.NoFrame)        
-        self.show()
+        self.setFrameShape(QScrollArea.NoFrame)
 
     def update_cards(self, cards : list = []) -> None:
         """
