@@ -7,6 +7,7 @@ Data: 03/2021
 """
 
 import sys, ctypes, styles
+from tkinter import Scrollbar
 from PyQt5.QtWidgets import (
     QApplication, 
     QSystemTrayIcon,
@@ -23,7 +24,7 @@ from PyQt5.QtWidgets import (
     QHBoxLayout,
     QGridLayout,
     QScrollArea,
-    QFrame, 
+    QGraphicsDropShadowEffect,
     QPushButton,
     )
 
@@ -94,7 +95,7 @@ class TraySystem(QSystemTrayIcon):
         self.hide()
         qApp.quit()
 
-class Landing(QMainWindow):
+class Landing(QWidget):
     """
     This class implements the main windows of the app.
     """
@@ -128,22 +129,20 @@ class Landing(QMainWindow):
         self.setMinimumSize(self.geometry[2], self.geometry[3])
         self.setMaximumSize(self.geometry[2], self.geometry[3])
 
-        self.main_widget = QWidget()
-        self.main_widget.setObjectName("Landing")
+        self.setObjectName("Landing")
 
         self.header = Header(self.title, self)
         self.card_list = CardList()
 
         #Set an empty layout to the main window
-        self.main_widget.setLayout(QVBoxLayout())
-        self.main_widget.layout().stretch(0)
-        self.main_widget.layout().setContentsMargins(0, 0, 0, 0)
-        self.main_widget.layout().setAlignment(QtCore.Qt.AlignTop)
-        self.main_widget.layout().addWidget(self.header)
-        self.main_widget.layout().addWidget(self.card_list)
+        self.setLayout(QVBoxLayout())
+        self.layout().setSpacing(0)
+        self.layout().setContentsMargins(0, 0, 0, 0)
+        self.layout().setAlignment(QtCore.Qt.AlignTop)
+        self.layout().addWidget(self.header)
+        self.layout().addWidget(self.card_list)
 
-        self.setCentralWidget(self.main_widget)
-        self.show()             
+        self.show()
 
     def closeEvent(self, event) -> None:
         self.callback.exit()
@@ -166,6 +165,9 @@ class Card(QWidget):
         self.__build_card()
 
     def __build_card(self) -> None:
+        
+        self.enterEvent = self.__enter_card
+        self.leaveEvent = self.__leave_card
 
         card = QGridLayout()
         #card.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
@@ -224,6 +226,15 @@ class Card(QWidget):
     def description(self, value : str) -> None:
         self.__description = value
         self.layout().itemAt(2).widget().setText(value)
+
+    def __enter_card(self, event) -> None:
+        hover = QGraphicsDropShadowEffect()
+        hover.setOffset(4, 4)
+        hover.setBlurRadius(10)
+        self.setGraphicsEffect(hover)
+
+    def __leave_card(self, event):
+        self.setGraphicsEffect(None)
 
     def paintEvent(self, a0: QtGui.QPaintEvent) -> None:
         """
@@ -295,7 +306,8 @@ class CardList(QScrollArea):
  
         self.setWidget(self.widget)
         self.setWidgetResizable(True)
-        #set frame to false
+        #Remove vertical scrollbar
+        self.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
         self.setFrameShape(QScrollArea.NoFrame)
 
     def update_cards(self, cards : list = []) -> None:

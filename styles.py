@@ -6,8 +6,8 @@ fonts = {
     "card-date" : QFont("Helvetica", 12, QFont.Bold),
     "card-description" : QFont("Helvetica", 10, QFont.Normal),
     "card-button" : QFont("Helvetica", 12, QFont.Bold),
-    "header-title" : QFont("Helvetica", 18, QFont.Bold),
-    "header-close-button" : QFont("Helvetica", 18, QFont.Bold),
+    "header-title" : QFont("Helvetica", 14, QFont.Bold),
+    "header-close-button" : QFont("Helvetica", 14, QFont.Bold),
 }
 
 stylesheet = """
@@ -28,7 +28,7 @@ QWidget#card {
 }
 
 QWidget#card:hover {
-    background-color: blue;
+    background-color: #cfcfcf;
 }
 
 QWidget#card:pressed {
@@ -73,7 +73,7 @@ QLabel#header-title {
 QPushButton#header-close-button {
     background-color: red;
     border-width: 2px;
-    border-radius: 5px;
+    border-radius: 15px;
     margin: 5px 10px 5px 0;
     max-width: 40px;
     max-height: 40px;
