@@ -6,8 +6,14 @@ Data: 03/2021
 
 """
 
-import sys, ctypes, styles
-from tkinter import Scrollbar
+from socket import close
+import sys, ctypes, utils.styles as styles
+
+from PyQt5.QtCore import (
+    QPropertyAnimation,
+    QRect
+)
+
 from PyQt5.QtWidgets import (
     QApplication, 
     QSystemTrayIcon,
@@ -106,7 +112,11 @@ class Landing(QWidget):
         self.description = description
         self.callback = callback
         self.geometry = geometry
-        
+        self.__cards : list = []
+
+        for i in range(10):
+            self.__cards.append(Card(i, "Mateus Konkol", "21/04/2022","É um cara esforçado para aprender as coisas no mundo e se dedicar a sua noiva Lavininha", "todo", self))
+
         self.initUI()
 
     def paintEvent(self, a0: QtGui.QPaintEvent) -> None:
@@ -125,7 +135,6 @@ class Landing(QWidget):
         self.setWindowIcon(QtGui.QIcon("open-book.png"))
         #set border radius in the main window
 
-
         self.setMinimumSize(self.geometry[2], self.geometry[3])
         self.setMaximumSize(self.geometry[2], self.geometry[3])
 
@@ -142,7 +151,24 @@ class Landing(QWidget):
         self.layout().addWidget(self.header)
         self.layout().addWidget(self.card_list)
 
+        self.card_list.update_cards(self.__cards)
+
         self.show()
+
+    def open_card(self, card : object) -> None:
+        self.card_list.expand_card(card)
+
+    def card_done(self, card : object) -> None:
+        card.status = "done"
+
+        card.close_animation = QPropertyAnimation(card, b"maximumHeight")
+        card.close_animation.setStartValue(card.height())
+        card.close_animation.setEndValue(0)
+        card.close_animation.setDuration(150)
+        card.close_animation.start()
+        card.close_animation.finished.connect(lambda: card.setParent(None))
+        
+        print("Você deletou o card " + str(card.id))
 
     def closeEvent(self, event) -> None:
         self.callback.exit()
@@ -154,13 +180,14 @@ class Card(QWidget):
     This class inherits from QWidget and implements a card layout 
     """
 
-    def __init__(self, id : int, title : str, date : str, description : str, callback : object) -> None:
+    def __init__(self, id : int, title : str, date : str, description : str, status : str, callback : object) -> None:
         super(Card, self).__init__()
         self.setObjectName("card") #Sets the object name to be used in stylesheets
         self.__id : int = id
         self.__title : str = title
         self.__description : str = description
         self.__date : str = date
+        self.__status : str = status
         self.__callback = callback
         self.__build_card()
 
@@ -212,6 +239,10 @@ class Card(QWidget):
     def date(self) -> str:
         return self.__date
 
+    @property
+    def status(self) -> str:
+        return self.__status
+
     @title.setter
     def title(self, value : str) -> None:
         self.__title = value
@@ -226,6 +257,10 @@ class Card(QWidget):
     def description(self, value : str) -> None:
         self.__description = value
         self.layout().itemAt(2).widget().setText(value)
+    
+    @status.setter
+    def status(self, value : str) -> None:
+        self.__status = value
 
     def __enter_card(self, event) -> None:
         hover = QGraphicsDropShadowEffect()
@@ -246,7 +281,12 @@ class Card(QWidget):
         self.style().drawPrimitive(QStyle.PE_Widget, opt, p, self)
 
     def __mousePressEvent(self, event) -> None:
-        print("Você clicou no card " + str(self.__id))
+        self.__callback.open_card(self)
+
+class cardEditor(QWidget):
+
+    def __init__(self, card : object, callback : object) -> None:
+        super(cardEditor, self).__init__()
 
 class Header(QWidget):
 
@@ -310,11 +350,19 @@ class CardList(QScrollArea):
         self.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
         self.setFrameShape(QScrollArea.NoFrame)
 
+    def clean(self) -> None:
+        """
+        Removes all cards from the list
+        """
+        for i in reversed(range(self.__list_layout.count())):
+            self.__list_layout.itemAt(i).widget().setParent(None)
+
     def update_cards(self, cards : list = []) -> None:
         """
         Receives a list card layouts to be added to the main layout
         """
         layout = self.__list_layout
+        self.clean()
 
         #Remove all widgets from the layout
         if layout.count() > 0:
@@ -328,6 +376,15 @@ class CardList(QScrollArea):
             for card in cards:
                 layout.addWidget(card) 
             print(layout.count())
+
+    def expand_card(self, card : Card) -> None:
+        """
+        Remove all cards from the widget and expands the given card to the full size of the widget to allow editing it
+        """
+        self.clean()
+        self.update_cards([card])
+        self.widget.adjustSize()
+        self.setFixedSize(self.widget.size())
 
     def paintEvent(self, a0: QtGui.QPaintEvent) -> None:
         """
@@ -352,33 +409,20 @@ class App:
         self.screen_resolution : tuple = (self.__user32.GetSystemMetrics(0), self.__user32.GetSystemMetrics(1))
         self.width : int = 500
         self.height : int = 800
-        self.geometry = (int(self.screen_resolution[0] / 2 - self.width / 2), int(self.screen_resolution[1] / 2 - self.height / 2), self.width, self.height)
-        self.__cards : list = [] 
+        self.geometry = (int(self.screen_resolution[0] / 2 - self.width / 2), int(self.screen_resolution[1] / 2 - self.height / 2), self.width, self.height) 
         
-        for i in range(10):
-            self.__cards.append(Card(i, "Mateus Konkol", "21/04/2022","É um cara esforçado para aprender as coisas no mundo e se dedicar a sua noiva Lavininha", self))
-
     def run(self):
 
         self.app.setStyle("Fusion")
         self.tray = TraySystem(self.menu)
         self.landing = Landing("To Do List", "Aqui você pode criar sua lista de tarefas", self, self.geometry)
-        self.landing.card_list.update_cards(self.__cards)
-
+        
         self.app.setStyleSheet(styles.stylesheet)
         
         self.app.exec_()
 
     def open_list(self):
         self.landing.show()
-    
-    def get_cards(self) -> list:
-        return self.__cards
-
-    def card_done(self, card : Card) -> None:
-        self.__cards.remove(card)
-        self.landing.card_list.update_cards(self.__cards)
-        print("Você deletou o card " + str(card.id))
 
     def settings(self):
         print("Configurar")
