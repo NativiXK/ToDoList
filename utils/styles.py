@@ -8,6 +8,11 @@ fonts = {
     "card-button" : QFont("Helvetica", 12, QFont.Bold),
     "header-title" : QFont("Helvetica", 14, QFont.Bold),
     "header-close-button" : QFont("Helvetica", 14, QFont.Bold),
+    "card-editor-title" : QFont("Helvetica", 12, QFont.Bold),
+    "card-editor-back" : QFont("Helvetica", 12, QFont.Bold),
+    "card-editor-description" : QFont("Helvetica", 12, QFont.Normal),
+    "card-editor-date" : QFont("Helvetica", 12, QFont.Bold),
+    "card-editor-save" : QFont("Helvetica", 12, QFont.Bold),
 }
 
 stylesheet = """

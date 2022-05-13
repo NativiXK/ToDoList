@@ -32,6 +32,8 @@ from PyQt5.QtWidgets import (
     QScrollArea,
     QGraphicsDropShadowEffect,
     QPushButton,
+    QLineEdit,
+    QTextEdit,
     )
 
 from PyQt5 import QtCore, QtGui
@@ -156,7 +158,17 @@ class Landing(QWidget):
         self.show()
 
     def open_card(self, card : object) -> None:
-        self.card_list.expand_card(card)
+        edit = CardEditor(card, self)
+        self.card_list.update_cards([edit])
+
+    def close_card_editor(self, card : object) -> None:
+        card.close_animation = QPropertyAnimation(card, b"maximumHeight")
+        card.close_animation.setStartValue(card.height())
+        card.close_animation.setEndValue(0)
+        card.close_animation.setDuration(150)
+        card.close_animation.start()
+        card.close_animation.finished.connect(lambda: self.card_list.update_cards(self.__cards))
+        
 
     def card_done(self, card : object) -> None:
         card.status = "done"
@@ -189,9 +201,9 @@ class Card(QWidget):
         self.__date : str = date
         self.__status : str = status
         self.__callback = callback
-        self.__build_card()
+        self.__build()
 
-    def __build_card(self) -> None:
+    def __build(self) -> None:
         
         self.enterEvent = self.__enter_card
         self.leaveEvent = self.__leave_card
@@ -283,10 +295,65 @@ class Card(QWidget):
     def __mousePressEvent(self, event) -> None:
         self.__callback.open_card(self)
 
-class cardEditor(QWidget):
+class CardEditor(QWidget):
+    """
+    Receives a card and builds a card editor, allowing to change the card's title, date, description and status.
+    Also, it allows to delete the card, save changes and close the editor.
+    """
 
     def __init__(self, card : object, callback : object) -> None:
-        super(cardEditor, self).__init__()
+        super(CardEditor, self).__init__()
+        self.setObjectName("card-editor") #Sets the object name to be used in stylesheets
+        self.__card = card
+        self.__callback = callback
+        self.__layout = QGridLayout()
+        self.__build()
+
+    def __build(self) -> None:
+
+        self.__back = QPushButton("Voltar")
+        self.__back.setObjectName("card-editor-back")
+        self.__back.setFont(styles.fonts[self.__back.objectName()])
+        self.__back.clicked.connect(lambda : self.__callback.close_card_editor(self))
+        self.__layout.addWidget(self.__back, 0, 0, 1, 1)
+
+        self.__title = QLineEdit(self.__card.title)
+        self.__title.setObjectName("card-editor-title")
+        self.__title.setFont(styles.fonts[self.__title.objectName()])
+        self.__layout.addWidget(self.__title, 1, 0, 1, 3)
+
+        self.__date = QLineEdit(self.__card.date)
+        self.__date.setObjectName("card-editor-date")
+        self.__date.setFont(styles.fonts[self.__date.objectName()])
+        self.__layout.addWidget(self.__date, 1, 3, 1, 2)
+
+        self.__description = QTextEdit(self.__card.description)
+        self.__description.setObjectName("card-editor-description")
+        self.__description.setFont(styles.fonts[self.__description.objectName()])
+        self.__layout.addWidget(self.__description, 2, 0, 2, 5)
+
+        self.__save = QPushButton("Salvar")
+        self.__save.setObjectName("card-editor-save")
+        self.__save.setFont(styles.fonts[self.__save.objectName()])
+        self.__save.clicked.connect(lambda : self.__save_card(self))
+        self.__layout.addWidget(self.__save, 4, 1, 1, 1)
+
+        self.setLayout(self.__layout)
+
+    def __save_card(self, event) -> None:
+        self.__card.title = self.__title.text()
+        self.__card.date = self.__date.text()
+        self.__card.description = self.__description.toPlainText()
+        self.__callback.close_card_editor(self)
+
+    def paintEvent(self, a0: QtGui.QPaintEvent) -> None:
+        """
+        This function must exist in order to use the stylesheets
+        """
+        opt = QStyleOption()
+        opt.initFrom(self)
+        p = QStylePainter(self)
+        self.style().drawPrimitive(QStyle.PE_Widget, opt, p, self)
 
 class Header(QWidget):
 
@@ -364,27 +431,9 @@ class CardList(QScrollArea):
         layout = self.__list_layout
         self.clean()
 
-        #Remove all widgets from the layout
-        if layout.count() > 0:
-            for i in reversed(range(layout.count())):
-                widget = layout.itemAt(i).widget()
-                if not widget in cards: #Delete thewidget if not in cards
-                    widget.setParent(None)
-                elif widget in cards:
-                    pass
-        else:
-            for card in cards:
-                layout.addWidget(card) 
-            print(layout.count())
-
-    def expand_card(self, card : Card) -> None:
-        """
-        Remove all cards from the widget and expands the given card to the full size of the widget to allow editing it
-        """
-        self.clean()
-        self.update_cards([card])
-        self.widget.adjustSize()
-        self.setFixedSize(self.widget.size())
+        for card in cards:
+            layout.addWidget(card) 
+        print(layout.count())
 
     def paintEvent(self, a0: QtGui.QPaintEvent) -> None:
         """
