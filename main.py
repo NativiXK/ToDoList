@@ -9,6 +9,8 @@ Data: 03/2021
 from socket import close
 import sys, ctypes, utils.styles as styles
 
+from requests import delete
+
 from PyQt5.QtCore import (
     QPropertyAnimation,
     QRect
@@ -144,6 +146,7 @@ class Landing(QWidget):
 
         self.header = Header(self.title, self)
         self.card_list = CardList()
+        self.footer = Footer(self)
 
         #Set an empty layout to the main window
         self.setLayout(QVBoxLayout())
@@ -152,24 +155,36 @@ class Landing(QWidget):
         self.layout().setAlignment(QtCore.Qt.AlignTop)
         self.layout().addWidget(self.header)
         self.layout().addWidget(self.card_list)
+        self.layout().addWidget(self.footer)
 
         self.card_list.update_cards(self.__cards)
 
         self.show()
 
+    def add_card(self) -> None:
+        new = CardEditor(Card(id = len(self.__cards) + 1, callback = self), self)
+        self.card_list.update_cards([new])
+
+    def save_card(self, editor : object) -> None:
+
+        card = editor.get_card()
+        if not card in self.__cards:
+            self.__cards.insert(0, card)
+
+        self.close_card_editor(editor)
+        
     def open_card(self, card : object) -> None:
         edit = CardEditor(card, self)
         self.card_list.update_cards([edit])
 
-    def close_card_editor(self, card : object) -> None:
-        card.close_animation = QPropertyAnimation(card, b"maximumHeight")
-        card.close_animation.setStartValue(card.height())
-        card.close_animation.setEndValue(0)
-        card.close_animation.setDuration(150)
-        card.close_animation.start()
-        card.close_animation.finished.connect(lambda: self.card_list.update_cards(self.__cards))
+    def close_card_editor(self, editor : object) -> None:
+        editor.close_animation = QPropertyAnimation(editor, b"maximumHeight")
+        editor.close_animation.setStartValue(editor.height())
+        editor.close_animation.setEndValue(0)
+        editor.close_animation.setDuration(250)
+        editor.close_animation.start()
+        editor.close_animation.finished.connect(lambda: self.card_list.update_cards(self.__cards))
         
-
     def card_done(self, card : object) -> None:
         card.status = "done"
 
@@ -180,7 +195,15 @@ class Landing(QWidget):
         card.close_animation.start()
         card.close_animation.finished.connect(lambda: card.setParent(None))
         
-        print("Você deletou o card " + str(card.id))
+        print("Você finalizou o card " + str(card.id))
+
+    def delete_card(self, card : object) -> None:
+        for card in self.__cards:
+            if card.id == card.id:
+                self.__cards.remove(card)
+                break
+            
+        self.card_list.update_cards(self.__cards)
 
     def closeEvent(self, event) -> None:
         self.callback.exit()
@@ -192,7 +215,7 @@ class Card(QWidget):
     This class inherits from QWidget and implements a card layout 
     """
 
-    def __init__(self, id : int, title : str, date : str, description : str, status : str, callback : object) -> None:
+    def __init__(self, id : int = 0, title : str = "", date : str = "", description : str = "", status : str = "", callback : object = None) -> None:
         super(Card, self).__init__()
         self.setObjectName("card") #Sets the object name to be used in stylesheets
         self.__id : int = id
@@ -315,7 +338,13 @@ class CardEditor(QWidget):
         self.__back.setObjectName("card-editor-back")
         self.__back.setFont(styles.fonts[self.__back.objectName()])
         self.__back.clicked.connect(lambda : self.__callback.close_card_editor(self))
-        self.__layout.addWidget(self.__back, 0, 0, 1, 1)
+        self.__layout.addWidget(self.__back, 0, 0, 1, 2, QtCore.Qt.AlignmentFlag.AlignLeft)
+
+        self.__delete = QPushButton("Deletar")
+        self.__delete.setObjectName("card-editor-delete")
+        self.__delete.setFont(styles.fonts[self.__delete.objectName()])
+        self.__delete.clicked.connect(lambda : self.__callback.delete_card(self))
+        self.__layout.addWidget(self.__delete, 0, 4, 1, 2, QtCore.Qt.AlignmentFlag.AlignRight)
 
         self.__title = QLineEdit(self.__card.title)
         self.__title.setObjectName("card-editor-title")
@@ -325,26 +354,27 @@ class CardEditor(QWidget):
         self.__date = QLineEdit(self.__card.date)
         self.__date.setObjectName("card-editor-date")
         self.__date.setFont(styles.fonts[self.__date.objectName()])
-        self.__layout.addWidget(self.__date, 1, 3, 1, 2)
+        self.__layout.addWidget(self.__date, 1, 4, 1, 2)
 
         self.__description = QTextEdit(self.__card.description)
         self.__description.setObjectName("card-editor-description")
         self.__description.setFont(styles.fonts[self.__description.objectName()])
-        self.__layout.addWidget(self.__description, 2, 0, 2, 5)
+        self.__layout.addWidget(self.__description, 2, 0, 2, 6, alignment = QtCore.Qt.AlignmentFlag.AlignVCenter)
 
         self.__save = QPushButton("Salvar")
         self.__save.setObjectName("card-editor-save")
         self.__save.setFont(styles.fonts[self.__save.objectName()])
-        self.__save.clicked.connect(lambda : self.__save_card(self))
-        self.__layout.addWidget(self.__save, 4, 1, 1, 1)
+        self.__save.clicked.connect(lambda : self.__callback.save_card(self))
+        self.__layout.addWidget(self.__save, 4, 0, 1, 6, QtCore.Qt.AlignmentFlag.AlignJustify)
 
         self.setLayout(self.__layout)
+        self.adjustSize()        
 
-    def __save_card(self, event) -> None:
+    def get_card(self) -> None:
         self.__card.title = self.__title.text()
         self.__card.date = self.__date.text()
         self.__card.description = self.__description.toPlainText()
-        self.__callback.close_card_editor(self)
+        return self.__card
 
     def paintEvent(self, a0: QtGui.QPaintEvent) -> None:
         """
@@ -362,9 +392,9 @@ class Header(QWidget):
         self.setObjectName("header")
         self.__title = title
         self.callback = callback
-        self.__build_header()
+        self.__build()
 
-    def __build_header(self) -> None:
+    def __build(self) -> None:
         header = QHBoxLayout()
         header.setContentsMargins(0, 0, 0, 0)
         
@@ -400,6 +430,26 @@ class Header(QWidget):
         p = QStylePainter(self)
         self.style().drawPrimitive(QStyle.PE_Widget, opt, p, self)
 
+class Footer(QWidget):
+
+    def __init__(self, callback : object) -> None:
+        super(Footer, self).__init__()
+        self.__callback = callback
+        self.setObjectName("footer")
+        self.__build()
+
+    def __build(self) -> None:
+        footer = QHBoxLayout()
+        footer.setContentsMargins(0, 0, 0, 0)
+
+        self.addButton = QPushButton(parent = self, text = "Adicionar")
+        self.addButton.setObjectName("footer-add-button")
+        self.addButton.setFont(styles.fonts[self.addButton.objectName()])
+        self.addButton.clicked.connect(lambda : self.__callback.add_card())
+
+        footer.addWidget(self.addButton)
+
+        self.setLayout(footer)
 class CardList(QScrollArea):
 
     def __init__(self) -> None:
@@ -432,7 +482,12 @@ class CardList(QScrollArea):
         self.clean()
 
         for card in cards:
-            layout.addWidget(card) 
+            if type(card) == Card:
+                if card.status != "done":
+                    layout.addWidget(card)
+            if type(card) == CardEditor:
+                layout.addWidget(card)
+        
         print(layout.count())
 
     def paintEvent(self, a0: QtGui.QPaintEvent) -> None:
@@ -488,7 +543,3 @@ if __name__ == "__main__":
         print(e)
         app.exit()
 
-    # list = CardList()
-    # list.update_cards(app.get_cards())
-    # app.app.setStyleSheet(styles.stylesheet)
-    # app.app.exec_()

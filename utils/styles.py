@@ -13,6 +13,11 @@ fonts = {
     "card-editor-description" : QFont("Helvetica", 12, QFont.Normal),
     "card-editor-date" : QFont("Helvetica", 12, QFont.Bold),
     "card-editor-save" : QFont("Helvetica", 12, QFont.Bold),
+    "card-editor-delete" : QFont("Helvetica", 12, QFont.Bold),
+    "footer-delete-button" : QFont("Helvetica", 12, QFont.Bold),
+    "footer-delete-button" : QFont("Helvetica", 12, QFont.Bold),
+    "footer-add-button" : QFont("Helvetica", 12, QFont.Bold),
+    "footer-delete-button" : QFont("Helvetica", 12, QFont.Bold),
 }
 
 stylesheet = """
@@ -68,7 +73,7 @@ QPushButton#card-button:hover {
 QWidget#header {
     background-color: #cccccc;
     border: 1px solid gray;
-    max-height: 100px;
+    min-height: 40px;
 }
 
 QLabel#header-title {
@@ -86,6 +91,86 @@ QPushButton#header-close-button {
 
 QPushButton#header-close-button:hover {
     background-color: #c91100;
+    min-width: 45px;
+    min-height: 45px;
 }
+
+QPushButton#card-editor-back {
+    background-color: #b0b0b0;
+    border-width: 2px;
+    border-radius: 5px;
+    border-color: beige;
+    min-width: 150px;
+    min-height: 40px;
+}
+
+QPushButton#card-editor-back:hover {
+    background-color: #a6a6a6;
+    border: 1px solid gray;
+    border-style: outset;
+}
+
+QPushButton#card-editor-delete {
+    background-color: red;
+    border-width: 2px;
+    border-radius: 5px;
+    margin: 5px 0px 5px 0;
+    min-width: 150px;
+    min-height: 40px;
+}
+
+QPushButton#card-editor-delete:hover {
+    background-color: #c91100;
+    border: 1px solid gray;
+    border-style: outset;
+}
+
+QPushButton#card-editor-save {
+    background-color: #b0b0b0;
+    border-width: 2px;
+    border-radius: 5px;
+    margin: 5px 0px 5px 0;
+    min-width: 200px;
+    min-height: 40px;
+}
+
+QPushButton#card-editor-save:hover {
+    background-color: #a6a6a6;
+    border: 1px solid gray;
+    border-style: outset;
+}
+
+QLineEdit#card-editor-title, QLineEdit#card-editor-date {
+    min-height: 35px;
+}
+
+QLineEdit#card-editor-title, QLineEdit#card-editor-date{
+    border-bottom-color: gray;
+    border-bottom: 5px;
+}
+
+QLineEdit#card-editor-title:focus{
+    border-bottom-color: blue;
+    border-bottom: 50px;
+}
+
+#footer {
+    background-color: #cccccc;
+    min-height: 40px;
+    margin: 0px;
+    padding: 0px;
+}
+
+#footer-add-buttom {
+    background-color: #b0b0b0;
+    min-height: 100%;
+    min-width: 100%;
+    border-width: 2px;
+    border-radius: 5px;
+    margin: 0px;
+    padding: 0px;
+}
+
+
 
         """
