@@ -46,11 +46,11 @@ class TraySystem(QSystemTrayIcon):
     if a menu has None value, it will generate a separator.
     """
 
-    def __init__(self, menu_callback):
+    def __init__(self, menu_callback, callback : object):
         
         super().__init__()
         self.menu_actions : list = menu_callback
-        
+        self.__callback = callback
         QSystemTrayIcon.__init__(self) #Inicializa o app no sistema tray
 
         # Set icon to a standard or custom icon
@@ -103,7 +103,7 @@ class TraySystem(QSystemTrayIcon):
 
     def exitApp(self):
         self.hide()
-        qApp.quit()
+        self.__callback.exit()
 
 class Landing(QWidget):
     """
@@ -118,8 +118,10 @@ class Landing(QWidget):
         self.geometry = geometry
         self.__cards : list = []
 
-        for i in range(10):
-            self.__cards.append(Card(i, "Mateus Konkol", "21/04/2022","É um cara esforçado para aprender as coisas no mundo e se dedicar a sua noiva Lavininha", "todo", self))
+        self.__cards.append(Card(id = 1, title = "Lavar o carro", description = "Comprar produtos", callback = self))
+        self.__cards.append(Card(id = 2, title = "Limpar o tênis", date="22/05/2022", callback = self))
+        self.__cards.append(Card(id = 3, title = "Lavar a louça", callback = self))
+        self.__cards.append(Card(id = 4, title = "Levar DOG no pet", date="17/05/2022", description="apenas banho e tosa higiênica", callback = self))
 
         self.initUI()
 
@@ -206,7 +208,6 @@ class Landing(QWidget):
         self.card_list.update_cards(self.__cards)
 
     def closeEvent(self, event) -> None:
-        self.callback.exit()
         self.hide()
         event.ignore()
 
@@ -520,7 +521,7 @@ class App:
     def run(self):
 
         self.app.setStyle("Fusion")
-        self.tray = TraySystem(self.menu)
+        self.tray = TraySystem(self.menu, self)
         self.landing = Landing("To Do List", "Aqui você pode criar sua lista de tarefas", self, self.geometry)
         
         self.app.setStyleSheet(styles.stylesheet)
@@ -534,7 +535,7 @@ class App:
         print("Configurar")
 
     def exit(self):
-        self.tray.exitApp()
+        self.app.quit()
         
 if __name__ == "__main__":
     app = App()
