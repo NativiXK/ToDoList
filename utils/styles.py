@@ -41,10 +41,6 @@ QWidget#card:hover {
     background-color: #cfcfcf;
 }
 
-QWidget#card:pressed {
-    background-color: black;
-}
-
 QPushButton#card-button {
     background-color: #b0b0b0;
     border-width: 2px;
@@ -154,23 +150,24 @@ QLineEdit#card-editor-title:focus{
     border-bottom: 50px;
 }
 
-#footer {
+QWidget#footer {
     background-color: #cccccc;
-    min-height: 40px;
-    margin: 0px;
+    max-height: 40px;
+    margin: 0 5px 0 5px;
     padding: 0px;
 }
 
-#footer-add-buttom {
+QPushButton#footer-add-button {
     background-color: #b0b0b0;
-    min-height: 100%;
+    min-height: 40px;
     min-width: 100%;
-    border-width: 2px;
-    border-radius: 5px;
-    margin: 0px;
+    margin: 0 5px 0 5px;
     padding: 0px;
+    border-radius: 5px;
 }
 
-
+#footer-add-button:hover {
+    background-color: #a6a6a6;
+}
 
         """

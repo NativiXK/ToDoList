@@ -202,7 +202,7 @@ class Landing(QWidget):
             if card.id == card.id:
                 self.__cards.remove(card)
                 break
-            
+
         self.card_list.update_cards(self.__cards)
 
     def closeEvent(self, event) -> None:
@@ -450,6 +450,8 @@ class Footer(QWidget):
         footer.addWidget(self.addButton)
 
         self.setLayout(footer)
+        ''
+
 class CardList(QScrollArea):
 
     def __init__(self) -> None:
@@ -542,4 +544,3 @@ if __name__ == "__main__":
     except Exception as e:
         print(e)
         app.exit()
-
