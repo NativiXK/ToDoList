@@ -6,10 +6,7 @@ Data: 03/2021
 
 """
 
-from socket import close
 import sys, ctypes, utils.styles as styles
-
-from requests import delete
 
 from PyQt5.QtCore import (
     QPropertyAnimation,
@@ -20,7 +17,6 @@ from PyQt5.QtWidgets import (
     QApplication, 
     QSystemTrayIcon,
     QMainWindow,
-    QAction,
     QStylePainter,
     QMenu, 
     QWidget, 
@@ -36,6 +32,7 @@ from PyQt5.QtWidgets import (
     QPushButton,
     QLineEdit,
     QTextEdit,
+    QMessageBox,
     )
 
 from PyQt5 import QtCore, QtGui
@@ -110,20 +107,23 @@ class Landing(QWidget):
     This class implements the main windows of the app.
     """
 
-    def __init__(self, title : str, description : str, callback : object, geometry : tuple) -> None:
+    def __init__(self, title : str, description : str, callback : object, geometry : tuple, cards: list = []) -> None:
         super(Landing, self).__init__()
         self.title = title
         self.description = description
         self.callback = callback
         self.geometry = geometry
-        self.__cards : list = []
+        self.__cards : list = self.buildCards(cards)
 
-        self.__cards.append(Card(id = 1, title = "Lavar o carro", description = "Comprar produtos", callback = self))
-        self.__cards.append(Card(id = 2, title = "Limpar o tênis", date="22/05/2022", callback = self))
-        self.__cards.append(Card(id = 3, title = "Lavar a louça", callback = self))
-        self.__cards.append(Card(id = 4, title = "Levar DOG no pet", date="17/05/2022", description="apenas banho e tosa higiênica", callback = self))
+        # self.__cards.append(Card(id = 1, title = "Lavar o carro", description = "Comprar produtos", callback = self))
+        # self.__cards.append(Card(id = 2, title = "Limpar o tênis", date="22/05/2022", callback = self))
+        # self.__cards.append(Card(id = 3, title = "Lavar a louça", callback = self))
+        # self.__cards.append(Card(id = 4, title = "Levar DOG no pet", date="17/05/2022", description="apenas banho e tosa higiênica", callback = self))
 
         self.initUI()
+
+    def buildCards(self, cards : list) -> list:
+        return [Card(id = card["id"], title = card["title"], date = card["date"], description = card["description"], status = card["status"], callback = self) for card in cards]
 
     def paintEvent(self, a0: QtGui.QPaintEvent) -> None:
         """
@@ -164,7 +164,7 @@ class Landing(QWidget):
         self.show()
 
     def add_card(self) -> None:
-        new = CardEditor(Card(id = len(self.__cards) + 1, callback = self), self)
+        new = CardEditor(Card(id = len(self.__cards) + 1, callback = self), True, self)
         self.card_list.update_cards([new])
 
     def save_card(self, editor : object) -> None:
@@ -176,7 +176,7 @@ class Landing(QWidget):
         self.close_card_editor(editor)
         
     def open_card(self, card : object) -> None:
-        edit = CardEditor(card, self)
+        edit = CardEditor(card, False, self)
         self.card_list.update_cards([edit])
 
     def close_card_editor(self, editor : object) -> None:
@@ -325,15 +325,15 @@ class CardEditor(QWidget):
     Also, it allows to delete the card, save changes and close the editor.
     """
 
-    def __init__(self, card : object, callback : object) -> None:
+    def __init__(self, card : object, new : bool, callback : object) -> None:
         super(CardEditor, self).__init__()
         self.setObjectName("card-editor") #Sets the object name to be used in stylesheets
         self.__card = card
         self.__callback = callback
         self.__layout = QGridLayout()
-        self.__build()
+        self.__build(new)
 
-    def __build(self) -> None:
+    def __build(self, new : bool) -> None:
 
         self.__back = QPushButton("Voltar")
         self.__back.setObjectName("card-editor-back")
@@ -341,35 +341,57 @@ class CardEditor(QWidget):
         self.__back.clicked.connect(lambda : self.__callback.close_card_editor(self))
         self.__layout.addWidget(self.__back, 0, 0, 1, 2, QtCore.Qt.AlignmentFlag.AlignLeft)
 
-        self.__delete = QPushButton("Deletar")
-        self.__delete.setObjectName("card-editor-delete")
-        self.__delete.setFont(styles.fonts[self.__delete.objectName()])
-        self.__delete.clicked.connect(lambda : self.__callback.delete_card(self))
-        self.__layout.addWidget(self.__delete, 0, 4, 1, 2, QtCore.Qt.AlignmentFlag.AlignRight)
+        if not new:
+            self.__delete = QPushButton("Deletar")
+            self.__delete.setObjectName("card-editor-delete")
+            self.__delete.setFont(styles.fonts[self.__delete.objectName()])
+            self.__delete.clicked.connect(lambda : self.__callback.delete_card(self))
+            self.__layout.addWidget(self.__delete, 0, 4, 1, 2, QtCore.Qt.AlignmentFlag.AlignRight)
+
+        self.__titleLabel = QLabel("Título:")
+        self.__titleLabel.setObjectName("card-title")
+        self.__titleLabel.setFont(styles.fonts[self.__titleLabel.objectName()])
+        self.__layout.addWidget(self.__titleLabel, 1, 0, 1, 3, QtCore.Qt.AlignmentFlag.AlignLeft)
 
         self.__title = QLineEdit(self.__card.title)
         self.__title.setObjectName("card-editor-title")
         self.__title.setFont(styles.fonts[self.__title.objectName()])
-        self.__layout.addWidget(self.__title, 1, 0, 1, 3)
+        self.__layout.addWidget(self.__title, 2, 0, 1, 3)
+
+        self.__dateLabel = QLabel("Data:")
+        self.__dateLabel.setObjectName("card-date")
+        self.__dateLabel.setFont(styles.fonts[self.__dateLabel.objectName()])
+        self.__layout.addWidget(self.__dateLabel, 1, 4, 1, 2, QtCore.Qt.AlignmentFlag.AlignLeft)
 
         self.__date = QLineEdit(self.__card.date)
         self.__date.setObjectName("card-editor-date")
         self.__date.setFont(styles.fonts[self.__date.objectName()])
-        self.__layout.addWidget(self.__date, 1, 4, 1, 2)
+        self.__layout.addWidget(self.__date, 2, 4, 1, 2)
+
+        self.__descriptionLabel = QLabel("Descrição:")
+        self.__descriptionLabel.setObjectName("card-date")
+        self.__descriptionLabel.setFont(styles.fonts[self.__descriptionLabel.objectName()])
+        self.__layout.addWidget(self.__descriptionLabel, 3, 0, 1, 6, QtCore.Qt.AlignmentFlag.AlignLeft)
 
         self.__description = QTextEdit(self.__card.description)
         self.__description.setObjectName("card-editor-description")
         self.__description.setFont(styles.fonts[self.__description.objectName()])
-        self.__layout.addWidget(self.__description, 2, 0, 2, 6, alignment = QtCore.Qt.AlignmentFlag.AlignVCenter)
+        self.__layout.addWidget(self.__description, 4, 0, 2, 6, alignment = QtCore.Qt.AlignmentFlag.AlignVCenter)
 
         self.__save = QPushButton("Salvar")
         self.__save.setObjectName("card-editor-save")
         self.__save.setFont(styles.fonts[self.__save.objectName()])
-        self.__save.clicked.connect(lambda : self.__callback.save_card(self))
-        self.__layout.addWidget(self.__save, 4, 0, 1, 6, QtCore.Qt.AlignmentFlag.AlignJustify)
+        self.__save.clicked.connect(self.saveCard)
+        self.__layout.addWidget(self.__save, 6, 0, 1, 6, QtCore.Qt.AlignmentFlag.AlignJustify)
 
         self.setLayout(self.__layout)
         self.adjustSize()        
+
+    def saveCard(self):
+        if self.__title.text():
+            self.__callback.save_card(self)
+        else:
+            QMessageBox.about(self.__callback, "Falta informação", "Adicione ao menos um título à tarefa")
 
     def get_card(self) -> None:
         self.__card.title = self.__title.text()
@@ -515,8 +537,8 @@ class App:
         self.__user32 = ctypes.windll.user32
         self.screen_resolution : tuple = (self.__user32.GetSystemMetrics(0), self.__user32.GetSystemMetrics(1))
         self.width : int = 500
-        self.height : int = 800
-        self.geometry = (int(self.screen_resolution[0] / 2 - self.width / 2), int(self.screen_resolution[1] / 2 - self.height / 2), self.width, self.height) 
+        self.height : int = 700
+        self.geometry = (int(self.screen_resolution[0] / 2 - self.width / 2), int(self.screen_resolution[1] / 2 - self.height/2 - 25), self.width, self.height) 
         
     def run(self):
 
