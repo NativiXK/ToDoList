@@ -6,22 +6,25 @@ Data: 03/2021
 
 """
 
-import sys, ctypes, utils.styles as styles
+import sys
+import ctypes
+import utils.styles as styles
+import utils.dbConnector as db
 
 from PyQt5.QtCore import (
     QPropertyAnimation,
-    QRect
+    QTimer,
 )
 
 from PyQt5.QtWidgets import (
-    QApplication, 
+    QApplication,
     QSystemTrayIcon,
     QMainWindow,
     QStylePainter,
-    QMenu, 
-    QWidget, 
-    QLabel, 
-    qApp, 
+    QMenu,
+    QWidget,
+    QLabel,
+    qApp,
     QStyleOption,
     QStyle,
     QVBoxLayout, 
@@ -33,7 +36,7 @@ from PyQt5.QtWidgets import (
     QLineEdit,
     QTextEdit,
     QMessageBox,
-    )
+)
 
 from PyQt5 import QtCore, QtGui
 
@@ -50,33 +53,55 @@ class TraySystem(QSystemTrayIcon):
         self.__callback = callback
         QSystemTrayIcon.__init__(self) #Inicializa o app no sistema tray
 
+        self.doubleTimer = QTimer()
+        self.doubleTimer.setSingleShot(True)
+        self.doubleTimer.timeout.connect(self.showMenu)
+
         # Set icon to a standard or custom icon
         self.setIcon(QtGui.QIcon("open-book.png"))
         self.setToolTip("To Do List")
         
         #Bind events
-        self.messageClicked.connect(self.showMenu) #Linka o signal gerado ao clicar na menssagem para exibir o menu
-        self.activated.connect(self.showMenu) #Linka o signal gerado ao clicar no icone para exibir o menu
+        # self.messageClicked.connect(self.showMenu) #Linka o signal gerado ao clicar na menssagem para exibir o menu
+        self.activated.connect(self.click) #Linka o signal gerado ao clicar no icone para exibir o menu
 
-        self.tray_menu = QMenu("CTo Do List")
+        self.tray_menu = QMenu("To Do List")
         self.updateMenu()
+        self.show()
+
+    def click(self):
+
+        if self.doubleTimer.isActive():
+            self.__callback.open_list()
+            self.doubleTimer.stop()
+        else:
+            self.doubleTimer.start(150)
 
     def updateMenu(self):
         """
         Update the menu with the new menu structure
         """
         self.tray_menu.clear()
-        for menu_item in self.menu_actions:
+
+        menu = self.menu_actions
+
+        for menu_item in menu:
+            # print(menu_item)
             if menu_item[1] == "separator":
                 self.tray_menu.addSeparator()
-                continue
+                
             elif menu_item[1] == "text":
                 self.tray_menu.addAction(menu_item[0])
-                continue
+            
+            elif type(menu_item) == list:
+                menu = self.tray_menu.addMenu(menu_item[0])
+                for submenu in menu_item[1:]:
+                    menu.addAction(submenu[0], submenu[1])
+
             else:
                 self.tray_menu.addAction(menu_item[0], menu_item[1])
 
-        self.setContextMenu(self.tray_menu)  # Set right-click menu
+        # self.setContextMenu(self.tray_menu)  # Set right-click menu
         self.show()
 
     #Exibe menu após clicar na mensagem
@@ -113,8 +138,7 @@ class Landing(QWidget):
         self.description = description
         self.callback = callback
         self.geometry = geometry
-        self.__cards : list = self.buildCards(cards)
-
+        self.__cards : list = self.__buildCards(cards)
         # self.__cards.append(Card(id = 1, title = "Lavar o carro", description = "Comprar produtos", callback = self))
         # self.__cards.append(Card(id = 2, title = "Limpar o tênis", date="22/05/2022", callback = self))
         # self.__cards.append(Card(id = 3, title = "Lavar a louça", callback = self))
@@ -122,8 +146,9 @@ class Landing(QWidget):
 
         self.initUI()
 
-    def buildCards(self, cards : list) -> list:
-        return [Card(id = card["id"], title = card["title"], date = card["date"], description = card["description"], status = card["status"], callback = self) for card in cards]
+    def __buildCards(self, tasks : list) -> list:
+        # print(tasks)
+        return [Card(id = card["id"], title = card["title"], date = card["date"], description = card["description"], status = card["status"],callback=self) for card in tasks]
 
     def paintEvent(self, a0: QtGui.QPaintEvent) -> None:
         """
@@ -153,7 +178,7 @@ class Landing(QWidget):
         #Set an empty layout to the main window
         self.setLayout(QVBoxLayout())
         self.layout().setSpacing(0)
-        self.layout().setContentsMargins(0, 0, 0, 0)
+        self.layout().setContentsMargins(0, 0, 0, 5)
         self.layout().setAlignment(QtCore.Qt.AlignTop)
         self.layout().addWidget(self.header)
         self.layout().addWidget(self.card_list)
@@ -166,6 +191,7 @@ class Landing(QWidget):
     def add_card(self) -> None:
         new = CardEditor(Card(id = len(self.__cards) + 1, callback = self), True, self)
         self.card_list.update_cards([new])
+        self.open_card_editor(new)
 
     def save_card(self, editor : object) -> None:
 
@@ -176,33 +202,41 @@ class Landing(QWidget):
         self.close_card_editor(editor)
         
     def open_card(self, card : object) -> None:
-        edit = CardEditor(card, False, self)
-        self.card_list.update_cards([edit])
+        editor = CardEditor(card, False, self)
+        self.card_list.update_cards([editor])
+        self.open_card_editor(editor)
+
+    def open_card_editor(self, editor : object) -> None:
+        editor.close_animation = QPropertyAnimation(editor, b"maximumHeight")
+        editor.close_animation.setStartValue(0)
+        editor.close_animation.setEndValue(editor.height())
+        editor.close_animation.setDuration(100)
+        editor.close_animation.start()
 
     def close_card_editor(self, editor : object) -> None:
         editor.close_animation = QPropertyAnimation(editor, b"maximumHeight")
         editor.close_animation.setStartValue(editor.height())
         editor.close_animation.setEndValue(0)
-        editor.close_animation.setDuration(250)
+        editor.close_animation.setDuration(100)
         editor.close_animation.start()
         editor.close_animation.finished.connect(lambda: self.card_list.update_cards(self.__cards))
         
     def card_done(self, card : object) -> None:
-        card.status = "done"
+        card.status = 1
 
         card.close_animation = QPropertyAnimation(card, b"maximumHeight")
         card.close_animation.setStartValue(card.height())
         card.close_animation.setEndValue(0)
-        card.close_animation.setDuration(150)
+        card.close_animation.setDuration(100)
         card.close_animation.start()
         card.close_animation.finished.connect(lambda: card.setParent(None))
         
-        print("Você finalizou o card " + str(card.id))
+        # print("Você finalizou o card " + str(card.id))
 
     def delete_card(self, card : object) -> None:
-        for card in self.__cards:
-            if card.id == card.id:
-                self.__cards.remove(card)
+        for task in self.__cards:
+            if task.id == card.id:
+                card.status = 2 # Deleted card
                 break
 
         self.card_list.update_cards(self.__cards)
@@ -214,9 +248,14 @@ class Landing(QWidget):
 class Card(QWidget):
     """
     This class inherits from QWidget and implements a card layout 
+
+    Status:
+        0 - Open
+        1 - Done
+        2 - "Deleted"
     """
 
-    def __init__(self, id : int = 0, title : str = "", date : str = "", description : str = "", status : str = "", callback : object = None) -> None:
+    def __init__(self, id : int = 0, title : str = "", date : str = "", description : str = "", status : int = 0, callback : object = None) -> None:
         super(Card, self).__init__()
         self.setObjectName("card") #Sets the object name to be used in stylesheets
         self.__id : int = id
@@ -225,39 +264,61 @@ class Card(QWidget):
         self.__date : str = date
         self.__status : str = status
         self.__callback = callback
-        self.__build()
+        self.setLayout(QGridLayout())
+        self.__buildLayout()
 
-    def __build(self) -> None:
+    def __buildLayout(self) -> None:
         
         self.enterEvent = self.__enter_card
         self.leaveEvent = self.__leave_card
 
-        card = QGridLayout()
+        layout = self.layout()
+
         #card.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+        
         label = QLabel(self.__title)
         label.setObjectName("card-title")
         label.setFont(styles.fonts[label.objectName()])
-        card.addWidget(label, 0, 0, 1, 2, QtCore.Qt.AlignmentFlag.AlignCenter)
+        
+        if self.__description:
+            layout.addWidget(label, 0, 0, 1, 2, QtCore.Qt.AlignmentFlag.AlignLeft)
+        elif self.__date: 
+            layout.addWidget(label, 0, 0, 2, 2, QtCore.Qt.AlignmentFlag.AlignLeft)
+            
+        else:
+            layout.addWidget(label, 0, 0, 2, 4, QtCore.Qt.AlignmentFlag.AlignLeft)
 
         label = QLabel(self.__date)
         label.setObjectName("card-date")
         label.setFont(styles.fonts[label.objectName()])
-        card.addWidget(label, 0, 2, 1, 2, QtCore.Qt.AlignmentFlag.AlignCenter)
 
-        label = QLabel(self.__description)
-        label.setWordWrap(True)
-        label.setObjectName("card-description")
-        label.setFont(styles.fonts[label.objectName()])
-        card.addWidget(label, 1, 0, 1, 4)
+        if self.__description:
+            layout.addWidget(label, 0, 2, 1, 2, QtCore.Qt.AlignmentFlag.AlignRight)
+        elif self.__date:
+            layout.addWidget(label, 0, 2, 2, 2, QtCore.Qt.AlignmentFlag.AlignRight)
+
+
+
+        if self.__description:
+            label = QLabel(self.__description)
+            label.setWordWrap(True)
+            label.setObjectName("card-description")
+            label.setFont(styles.fonts[label.objectName()])
+            layout.addWidget(label, 1, 0, 1, 4)
 
         button = QPushButton("Concluído")
         button.setObjectName("card-button")
         button.setFont(styles.fonts[button.objectName()])
         button.clicked.connect(lambda : self.__callback.card_done(self))
-        card.addWidget(button, 2, 0, 1, 4)
+        layout.addWidget(button, 2, 0, 1, 4)
 
-        self.setLayout(card)
         self.mousePressEvent = self.__mousePressEvent
+
+    def __clear(self):
+        layout = self.layout()
+
+        for i in reversed(range(layout.count())):
+            layout.itemAt(i).widget().setParent(None)
 
     @property
     def id(self) -> int:
@@ -282,21 +343,23 @@ class Card(QWidget):
     @title.setter
     def title(self, value : str) -> None:
         self.__title = value
-        self.layout().itemAt(0).widget().setText(value)
     
     @date.setter
     def date(self, value : str) -> None:
         self.__date = value
-        self.layout().itemAt(1).widget().setText(value)
     
     @description.setter
     def description(self, value : str) -> None:
         self.__description = value
-        self.layout().itemAt(2).widget().setText(value)
     
     @status.setter
     def status(self, value : str) -> None:
         self.__status = value
+
+    def rebuildLayout(self):
+
+        self.__clear()
+        self.__buildLayout()
 
     def __enter_card(self, event) -> None:
         hover = QGraphicsDropShadowEffect()
@@ -345,7 +408,7 @@ class CardEditor(QWidget):
             self.__delete = QPushButton("Deletar")
             self.__delete.setObjectName("card-editor-delete")
             self.__delete.setFont(styles.fonts[self.__delete.objectName()])
-            self.__delete.clicked.connect(lambda : self.__callback.delete_card(self))
+            self.__delete.clicked.connect(lambda : self.__callback.delete_card(self.__card))
             self.__layout.addWidget(self.__delete, 0, 4, 1, 2, QtCore.Qt.AlignmentFlag.AlignRight)
 
         self.__titleLabel = QLabel("Título:")
@@ -397,6 +460,7 @@ class CardEditor(QWidget):
         self.__card.title = self.__title.text()
         self.__card.date = self.__date.text()
         self.__card.description = self.__description.toPlainText()
+        self.__card.rebuildLayout()
         return self.__card
 
     def paintEvent(self, a0: QtGui.QPaintEvent) -> None:
@@ -473,7 +537,6 @@ class Footer(QWidget):
         footer.addWidget(self.addButton)
 
         self.setLayout(footer)
-        ''
 
 class CardList(QScrollArea):
 
@@ -508,12 +571,12 @@ class CardList(QScrollArea):
 
         for card in cards:
             if type(card) == Card:
-                if card.status != "done":
+                if card.status == 0:
                     layout.addWidget(card)
             if type(card) == CardEditor:
                 layout.addWidget(card)
         
-        print(layout.count())
+        # print(layout.count())
 
     def paintEvent(self, a0: QtGui.QPaintEvent) -> None:
         """
@@ -531,30 +594,42 @@ class App:
         self.menu = [
             ("Abrir", self.open_list),
             ("Separador", "separator"),
-            ("Configurar", self.settings),
+            [
+                "Configurações", # Submenu title
+                ("Limpar tudo", self.clearAllTasks),
+                ("Configurar", self.settings),
+            ],
             ("Sair", self.exit)
         ]
+
+        self.conn = db.Connector(path="tasks.db", schema="schema.sql")
         self.__user32 = ctypes.windll.user32
         self.screen_resolution : tuple = (self.__user32.GetSystemMetrics(0), self.__user32.GetSystemMetrics(1))
         self.width : int = 500
         self.height : int = 700
         self.geometry = (int(self.screen_resolution[0] / 2 - self.width / 2), int(self.screen_resolution[1] / 2 - self.height/2 - 25), self.width, self.height) 
-        
-    def run(self):
 
+    def tasks(self):
+        return self.conn.tasks()
+
+    def run(self):
         self.app.setStyle("Fusion")
         self.tray = TraySystem(self.menu, self)
-        self.landing = Landing("To Do List", "Aqui você pode criar sua lista de tarefas", self, self.geometry)
+        self.landing = Landing("To Do List", "Aqui você pode criar sua lista de tarefas", self, self.geometry, cards=self.tasks())
         
         self.app.setStyleSheet(styles.stylesheet)
         
         self.app.exec_()
 
     def open_list(self):
+
         self.landing.show()
 
     def settings(self):
-        print("Configurar")
+        print("Settings")
+    
+    def clearAllTasks(self):
+        self.conn.reinit()
 
     def exit(self):
         self.app.quit()
