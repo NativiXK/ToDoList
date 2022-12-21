@@ -42,6 +42,7 @@ class Connector:
             self.db.executescript(script)
         except sqlite3.OperationalError as e:
             print(f"\nSQL Schema with error {e.args[0]}")
+        self.db.commit()
 
     def reinit(self):
         self.__init_schema()

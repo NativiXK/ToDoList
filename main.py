@@ -263,9 +263,9 @@ class Landing(QWidget):
         self.card_list.update_cards(self.__cards)
 
     def update_cards(self):
-        # self.__cards = self.__build_cards(self.callback.tasks())
-        for card in self.__cards:
-            card.status = 0
+        self.__cards = self.__build_cards(self.callback.tasks())
+        # for card in self.__cards:
+        #     card.status = 0
         self.card_list.update_cards(self.__cards)
 
     def closeEvent(self, event) -> None:
@@ -741,6 +741,7 @@ class App:
     
     def clearAllTasks(self):
         self.conn.reinit()
+        self.landing.update_cards()
 
     def update_cards(self):
         self.landing.update_cards()
