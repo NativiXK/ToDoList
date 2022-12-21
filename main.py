@@ -13,7 +13,9 @@ import utils.dbConnector as db
 
 from PyQt5.QtCore import (
     QPropertyAnimation,
+    QParallelAnimationGroup,
     QTimer,
+    QEasingCurve,
 )
 
 from PyQt5.QtWidgets import (
@@ -36,6 +38,7 @@ from PyQt5.QtWidgets import (
     QLineEdit,
     QTextEdit,
     QMessageBox,
+    QComboBox,
 )
 
 from PyQt5 import QtCore, QtGui
@@ -138,7 +141,7 @@ class Landing(QWidget):
         self.description = description
         self.callback = callback
         self.geometry = geometry
-        self.__cards : list = self.__buildCards(cards)
+        self.__cards : list = self.__build_cards(cards)
         # self.__cards.append(Card(id = 1, title = "Lavar o carro", description = "Comprar produtos", callback = self))
         # self.__cards.append(Card(id = 2, title = "Limpar o tênis", date="22/05/2022", callback = self))
         # self.__cards.append(Card(id = 3, title = "Lavar a louça", callback = self))
@@ -146,7 +149,7 @@ class Landing(QWidget):
 
         self.initUI()
 
-    def __buildCards(self, tasks : list) -> list:
+    def __build_cards(self, tasks : list) -> list:
         # print(tasks)
         return [Card(id = card["id"], title = card["title"], date = card["date"], description = card["description"], status = card["status"],callback=self) for card in tasks]
 
@@ -172,6 +175,7 @@ class Landing(QWidget):
         self.setObjectName("Landing")
 
         self.header = Header(self.title, self)
+        self.menu = Menu(self)
         self.card_list = CardList()
         self.footer = Footer(self)
 
@@ -181,12 +185,16 @@ class Landing(QWidget):
         self.layout().setContentsMargins(0, 0, 0, 5)
         self.layout().setAlignment(QtCore.Qt.AlignTop)
         self.layout().addWidget(self.header)
+        self.layout().addWidget(self.menu)
         self.layout().addWidget(self.card_list)
         self.layout().addWidget(self.footer)
 
         self.card_list.update_cards(self.__cards)
 
         self.show()
+
+    def toggle_menu(self):
+        self.menu.state = not self.menu.state
 
     def add_card(self) -> None:
         new = CardEditor(Card(id = len(self.__cards) + 1, callback = self), True, self)
@@ -198,6 +206,9 @@ class Landing(QWidget):
         card = editor.get_card()
         if not card in self.__cards:
             self.__cards.insert(0, card)
+            self.callback.new_task(str(card))
+        else:
+            self.callback.save_task(str(card))
 
         self.close_card_editor(editor)
         
@@ -207,38 +218,54 @@ class Landing(QWidget):
         self.open_card_editor(editor)
 
     def open_card_editor(self, editor : object) -> None:
-        editor.close_animation = QPropertyAnimation(editor, b"maximumHeight")
-        editor.close_animation.setStartValue(0)
-        editor.close_animation.setEndValue(editor.height())
-        editor.close_animation.setDuration(100)
-        editor.close_animation.start()
+        editor.animation = QPropertyAnimation(editor, b"maximumHeight")
+        editor.animation.setStartValue(0)
+        editor.animation.setEndValue(editor.height())
+        editor.animation.setDuration(100)
+        editor.animation.setEasingCurve(QEasingCurve.InOutCubic)
+        editor.animation.start()
 
     def close_card_editor(self, editor : object) -> None:
-        editor.close_animation = QPropertyAnimation(editor, b"maximumHeight")
-        editor.close_animation.setStartValue(editor.height())
-        editor.close_animation.setEndValue(0)
-        editor.close_animation.setDuration(100)
-        editor.close_animation.start()
-        editor.close_animation.finished.connect(lambda: self.card_list.update_cards(self.__cards))
+        editor.animation = QPropertyAnimation(editor, b"maximumHeight")
+        editor.animation.setStartValue(editor.height())
+        editor.animation.setEndValue(0)
+        editor.animation.setDuration(100)
+        editor.animation.setEasingCurve(QEasingCurve.InOutCubic)
+        editor.animation.start()
+        editor.animation.finished.connect(lambda: self.card_list.update_cards(self.__cards))
         
     def card_done(self, card : object) -> None:
         card.status = 1
+        self.callback.save_task(str(card))
 
-        card.close_animation = QPropertyAnimation(card, b"maximumHeight")
-        card.close_animation.setStartValue(card.height())
-        card.close_animation.setEndValue(0)
-        card.close_animation.setDuration(100)
-        card.close_animation.start()
-        card.close_animation.finished.connect(lambda: card.setParent(None))
-        
-        # print("Você finalizou o card " + str(card.id))
+        card.anim_height = QPropertyAnimation(card, b"maximumHeight")
+        card.anim_height.setStartValue(card.height())
+        card.anim_height.setEndValue(0)
+        card.anim_height.setDuration(150)
+        card.anim_height.setEasingCurve(QEasingCurve.InOutCubic)
+
+        card.anim_width = QPropertyAnimation(card, b"maximumWidth")
+        card.anim_width.setStartValue(card.width())
+        card.anim_width.setEndValue(0)
+        card.anim_width.setDuration(75)
+        card.anim_width.setEasingCurve(QEasingCurve.InOutCubic)
+
+        card.animation = QParallelAnimationGroup()
+        card.animation.addAnimation(card.anim_height)
+        card.animation.addAnimation(card.anim_width)
+        card.animation.start()
+        card.animation.finished.connect(lambda: card.setParent(None))
 
     def delete_card(self, card : object) -> None:
-        for task in self.__cards:
-            if task.id == card.id:
-                card.status = 2 # Deleted card
-                break
 
+        card.status = 2 # Deleted card
+        self.callback.save_task(str(card))
+        self.card_list.update_cards(self.__cards)
+
+    def update_cards(self):
+        # self.__cards = self.__build_cards(self.callback.tasks())
+        for card in self.__cards:
+            card.status = 0
         self.card_list.update_cards(self.__cards)
 
     def closeEvent(self, event) -> None:
@@ -266,6 +293,9 @@ class Card(QWidget):
         self.__callback = callback
         self.setLayout(QGridLayout())
         self.__buildLayout()
+
+    def __str__(self) -> str:
+        return f"({self.id}, \"{self.title}\", \"{self.date}\", \"{self.description}\", {self.status})"
 
     def __buildLayout(self) -> None:
         
@@ -472,6 +502,74 @@ class CardEditor(QWidget):
         p = QStylePainter(self)
         self.style().drawPrimitive(QStyle.PE_Widget, opt, p, self)
 
+class Menu(QWidget):
+
+    def __init__(self, callback) -> None:
+        super(Menu, self).__init__()
+        self.callback = callback
+        self.__state = False
+        self.max_height = 100;
+
+        self.setObjectName("menu")
+        self.setLayout(QGridLayout())
+        # self.layout().setSpacing(0)
+        # self.layout().setContentsMargins(0, 0, 0, 5)
+        self.setFixedHeight(0)
+        self.layout().setAlignment(QtCore.Qt.AlignTop)
+
+        self.button = QPushButton(self, text="Tarefas finalizadas")
+        self.button.setObjectName("menu-button")
+        self.button.setFont(styles.fonts[self.button.objectName()])
+        self.layout().addWidget(self.button, 0, 0, 1, 2, QtCore.Qt.AlignmentFlag.AlignCenter)
+
+        self.adjustSize()
+    
+    @property
+    def state(self):
+        return self.__state
+
+    @state.setter
+    def state(self, state : bool):
+        if state:
+            self.__open()
+        else:
+            self.__close()
+
+    def __open(self):
+        self.__state = True
+
+        self.animation = QPropertyAnimation(self, b"maximumHeight")
+        self.animation.setEndValue(self.max_height)
+        self.animation.setDuration(300)
+        self.animation.setEasingCurve(QEasingCurve.InOutCubic)
+        self.animation.start()
+
+        open = lambda : self.setFixedHeight(self.max_height)
+
+        self.animation.finished.connect(open)
+    
+    def __close(self):
+        self.__state = False
+        
+        self.animation = QPropertyAnimation(self, b"maximumHeight")
+        self.animation.setEndValue(0)
+        self.animation.setDuration(300)
+        self.animation.setEasingCurve(QEasingCurve.InOutCubic)
+        self.animation.start()
+        
+        close = lambda : self.setFixedHeight(0)
+
+        self.animation.finished.connect(close)
+
+    def paintEvent(self, a0: QtGui.QPaintEvent) -> None:
+        """
+        This function must exist in order to use the stylesheets
+        """
+        opt = QStyleOption()
+        opt.initFrom(self)
+        p = QStylePainter(self)
+        self.style().drawPrimitive(QStyle.PE_Widget, opt, p, self)
+
 class Header(QWidget):
 
     def __init__(self, title : str, callback : QMainWindow) -> None:
@@ -485,6 +583,10 @@ class Header(QWidget):
         header = QHBoxLayout()
         header.setContentsMargins(0, 0, 0, 0)
         
+        self.menuButton = QPushButton(parent = self, text="MENU")
+        self.menuButton.setObjectName("header-menu-button")
+        self.menuButton.clicked.connect(lambda : self.callback.toggle_menu())
+
         self.titleLabel = QLabel(parent = self, text = self.__title)
         self.titleLabel.setObjectName("header-title")
         self.titleLabel.setFont(styles.fonts[self.titleLabel.objectName()])
@@ -494,6 +596,7 @@ class Header(QWidget):
         self.closeButton.setFont(styles.fonts[self.closeButton.objectName()])
         self.closeButton.clicked.connect(lambda : self.callback.close())
 
+        header.addWidget(self.menuButton)
         header.addWidget(self.titleLabel)
         header.addWidget(self.closeButton)
 
@@ -596,6 +699,7 @@ class App:
             ("Separador", "separator"),
             [
                 "Configurações", # Submenu title
+                ("Atualizar lista", self.update_cards),
                 ("Limpar tudo", self.clearAllTasks),
                 ("Configurar", self.settings),
             ],
@@ -611,6 +715,13 @@ class App:
 
     def tasks(self):
         return self.conn.tasks()
+
+    def new_task(self, task : str):
+        task = "(" + ",".join(task.strip("()").split(",")[1:]) + ")"
+        self.conn.add_task(task)
+
+    def save_task(self, task : str):
+        self.conn.update_task(task)
 
     def run(self):
         self.app.setStyle("Fusion")
@@ -630,6 +741,9 @@ class App:
     
     def clearAllTasks(self):
         self.conn.reinit()
+
+    def update_cards(self):
+        self.landing.update_cards()
 
     def exit(self):
         self.app.quit()

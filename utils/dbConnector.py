@@ -63,17 +63,32 @@ class Connector:
     def close(self, e=None):
         self.db.close()
 
-    def query_one(self, query) -> dict:
+    def query_commit(self, query : str):
+        self.cursor.execute(query)
+        self.db.commit()
+
+    def query_one(self, query : str) -> dict:
         self.cursor.execute(query)
         return self.cursor.fetchone()
 
-    def query_all(self, query) -> list:
+    def query_all(self, query : str) -> list:
         self.cursor.execute(query)
         return self.cursor.fetchall()
 
     def tasks(self) -> dict:
-        query : str = "SELECT * FROM tasks"
+        query : str = "SELECT * FROM tasks ORDER BY id DESC"
         return self.query_all(query)
+
+    def add_task(self, task : str):
+        query = "INSERT INTO tasks (title, date, description, status) VALUES " + task
+        print(query)
+        self.query_commit(query)
+
+    def update_task(self, task : str):
+        task = [i.strip() for i in task.strip("()").split(",")]
+        query = f"UPDATE tasks SET title = {task[1]}, date = {task[2]}, description = {task[3]}, status = {int(task[4])} WHERE id = {int(task[0])}"
+        print(query)
+        self.query_commit(query)
 
 if __name__ == "__main__":
     conn = Connector(path="deletar.db", schema="schema.sql", init=True)
