@@ -24,6 +24,7 @@ from PyQt5.QtWidgets import (
     QMainWindow,
     QStylePainter,
     QMenu,
+    QFrame,
     QWidget,
     QLabel,
     qApp,
@@ -221,17 +222,17 @@ class Landing(QWidget):
         editor.animation = QPropertyAnimation(editor, b"maximumHeight")
         editor.animation.setStartValue(0)
         editor.animation.setEndValue(editor.height())
-        editor.animation.setDuration(100)
+        editor.animation.setDuration(200)
         editor.animation.setEasingCurve(QEasingCurve.InOutCubic)
-        editor.animation.start()
+        editor.animation.start(QPropertyAnimation.DeletionPolicy.DeleteWhenStopped)
 
     def close_card_editor(self, editor : object) -> None:
         editor.animation = QPropertyAnimation(editor, b"maximumHeight")
         editor.animation.setStartValue(editor.height())
         editor.animation.setEndValue(0)
-        editor.animation.setDuration(100)
+        editor.animation.setDuration(200)
         editor.animation.setEasingCurve(QEasingCurve.InOutCubic)
-        editor.animation.start()
+        editor.animation.start(QPropertyAnimation.DeletionPolicy.DeleteWhenStopped)
         editor.animation.finished.connect(lambda: self.card_list.update_cards(self.__cards))
         
     def card_done(self, card : object) -> None:
@@ -247,13 +248,13 @@ class Landing(QWidget):
         card.anim_width = QPropertyAnimation(card, b"maximumWidth")
         card.anim_width.setStartValue(card.width())
         card.anim_width.setEndValue(0)
-        card.anim_width.setDuration(75)
+        card.anim_width.setDuration(250)
         card.anim_width.setEasingCurve(QEasingCurve.InOutCubic)
 
         card.animation = QParallelAnimationGroup()
         card.animation.addAnimation(card.anim_height)
         card.animation.addAnimation(card.anim_width)
-        card.animation.start()
+        card.animation.start(QPropertyAnimation.DeletionPolicy.DeleteWhenStopped)
         card.animation.finished.connect(lambda: card.setParent(None))
 
     def delete_card(self, card : object) -> None:
@@ -508,19 +509,27 @@ class Menu(QWidget):
         super(Menu, self).__init__()
         self.callback = callback
         self.__state = False
-        self.max_height = 100;
+        self.max_height = 200;
+
+        self.setHidden(True)
 
         self.setObjectName("menu")
-        self.setLayout(QGridLayout())
-        # self.layout().setSpacing(0)
-        # self.layout().setContentsMargins(0, 0, 0, 5)
-        self.setFixedHeight(0)
+        self.setLayout(QVBoxLayout())
+        self.layout().setContentsMargins(100, 10, 100, 10)
+        self.layout().setSpacing(10)
+
+        self.geometry().setHeight(0)
         self.layout().setAlignment(QtCore.Qt.AlignTop)
 
         self.button = QPushButton(self, text="Tarefas finalizadas")
         self.button.setObjectName("menu-button")
         self.button.setFont(styles.fonts[self.button.objectName()])
-        self.layout().addWidget(self.button, 0, 0, 1, 2, QtCore.Qt.AlignmentFlag.AlignCenter)
+        self.layout().addWidget(self.button)
+
+        self.button = QPushButton(self, text="Tarefas excluídas")
+        self.button.setObjectName("menu-button")
+        self.button.setFont(styles.fonts[self.button.objectName()])
+        self.layout().addWidget(self.button)
 
         self.adjustSize()
     
@@ -537,29 +546,35 @@ class Menu(QWidget):
 
     def __open(self):
         self.__state = True
-
+        startGeom = self.geometry()
+        # endGeom = QtCore.QRect(startGeom.left(), startGeom.top(), startGeom.width(), 200)
+        self.setHidden(False)
         self.animation = QPropertyAnimation(self, b"maximumHeight")
+        self.animation.setStartValue(0)
         self.animation.setEndValue(self.max_height)
-        self.animation.setDuration(300)
+        self.animation.setDuration(250)
         self.animation.setEasingCurve(QEasingCurve.InOutCubic)
-        self.animation.start()
+        self.animation.start(QPropertyAnimation.DeletionPolicy.DeleteWhenStopped)
 
-        open = lambda : self.setFixedHeight(self.max_height)
+        # open = lambda : self.setFixedHeight(self.max_height)
 
-        self.animation.finished.connect(open)
+        self.animation.finished.connect(lambda: self.repaint())
     
     def __close(self):
         self.__state = False
-        
-        self.animation = QPropertyAnimation(self, b"maximumHeight")
-        self.animation.setEndValue(0)
-        self.animation.setDuration(300)
-        self.animation.setEasingCurve(QEasingCurve.InOutCubic)
-        self.animation.start()
-        
-        close = lambda : self.setFixedHeight(0)
+        startGeom = self.geometry()
+        # endGeom = QtCore.QRect(startGeom.left(), startGeom.top(), startGeom.width(), int(0))
 
-        self.animation.finished.connect(close)
+        self.animation = QPropertyAnimation(self, b"maximumHeight")
+        self.animation.setStartValue(self.max_height)
+        self.animation.setEndValue(0)
+        self.animation.setDuration(200)
+        self.animation.setEasingCurve(QEasingCurve.InOutCubic)
+        self.animation.start(QPropertyAnimation.DeletionPolicy.DeleteWhenStopped)
+        
+        # close = lambda : self.setFixedHeight(0)
+
+        self.animation.finished.connect(lambda: self.repaint())
 
     def paintEvent(self, a0: QtGui.QPaintEvent) -> None:
         """

@@ -8,7 +8,7 @@ fonts = {
     "card-button" : QFont("Helvetica", 12, QFont.Bold),
     "header-title" : QFont("Helvetica", 14, QFont.Bold),
     "header-close-button" : QFont("Helvetica", 14, QFont.Bold),
-    "menu-button" : QFont("Helvetica", 14, QFont.Bold),
+    "menu-button" : QFont("Helvetica", 12, QFont.Normal),
     "card-editor-title" : QFont("Helvetica", 12, QFont.Bold),
     "card-editor-back" : QFont("Helvetica", 12, QFont.Bold),
     "card-editor-description" : QFont("Helvetica", 12, QFont.Normal),
@@ -80,8 +80,8 @@ QLabel#header-title {
 QPushButton#header-close-button {
     background-color: red;
     border-width: 2px;
-    border-radius: 19px;
-    margin: 5px 10px 5px 0;
+    border-radius: 15px;
+    margin: 5px 10px 5px 5px;
     max-width: 40px;
     max-height: 40px;
 }
@@ -93,19 +93,23 @@ QPushButton#header-close-button:hover {
 }
 
 QPushButton#header-menu-button {
-    background-color: #cccccc;
-    border-width: 0;
+    background-color: #999999;
+    border-color: black;
+    border-radius: 5px;
+    border-width: 2px;
     margin: 5px 5px 5px 5px;
-    padding: 2 2 2 2;
+    padding: 2px 2px 2px 2px;
     max-width: 50px;
     max-height: 50px;
 }
 
 QPushButton#header-menu-button:hover {
-    background-color: #aaaaaa;
-    padding: 0 0 0 0;
+    background-color: #bbbbbb;
+    border-radius: 5px;
     min-width: 55px;
     min-height: 55px;
+    border: 1px solid gray;
+    border-style: outset;
 }
 
 QWidget#menu {
@@ -115,6 +119,15 @@ QWidget#menu {
 
 QPushButton#menu-button {
     background-color: #a0a0a0;
+    background-color: #bbbbbb;
+    border-radius: 5px;
+    padding: 5px;
+}
+
+QPushButton#menu-button:hover {
+    background-color: #a0a0a0;
+    border: 1px solid gray;
+    border-style: outset;
 }
 
 QPushButton#card-editor-back {
